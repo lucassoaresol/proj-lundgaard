@@ -1,0 +1,40 @@
+{
+  "name": "lundgaard",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "build": "tsup src",
+    "db": "pnpm pg-utils create && pnpm pg-utils migrate",
+    "dev": "tsx watch src/api/index.ts",
+    "lint": "eslint src/**/*.ts --fix",
+    "start": "node dist/api/index.js",
+    "cron": "node dist/cron/index.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@fastify/cors": "11.1.0",
+    "@notionhq/client": "5.4.0",
+    "cron": "4.3.4",
+    "dayjs": "1.11.19",
+    "dotenv": "17.2.3",
+    "fastify": "5.6.2",
+    "zod": "4.1.12"
+  },
+  "devDependencies": {
+    "@types/node": "24.10.1",
+    "@typescript-eslint/eslint-plugin": "8.6.0",
+    "@typescript-eslint/parser": "8.6.0",
+    "eslint": "8.57.0",
+    "eslint-config-prettier": "9.1.0",
+    "eslint-import-resolver-typescript": "3.6.3",
+    "eslint-plugin-import": "2.30.0",
+    "eslint-plugin-prettier": "5.2.1",
+    "tsup": "8.5.1",
+    "tsx": "4.20.6",
+    "typescript": "5.2.2"
+  }
+}
