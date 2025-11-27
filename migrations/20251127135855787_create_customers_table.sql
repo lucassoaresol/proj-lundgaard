@@ -1,0 +1,12 @@
+-- up
+CREATE TABLE "customers" (
+  "id" SERIAL PRIMARY KEY,
+  "name" TEXT NOT NULL UNIQUE,
+  "data" JSONB,
+  "notion_id" TEXT NOT NULL UNIQUE,
+  "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "updated_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+-- down
+DROP TABLE IF EXISTS "customers";

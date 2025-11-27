@@ -9,6 +9,7 @@
     "dev": "tsx watch src/api/index.ts",
     "lint": "eslint src/**/*.ts --fix",
     "start": "node dist/api/index.js",
+    "worker": "node dist/worker/index.js",
     "cron": "node dist/cron/index.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
@@ -16,8 +17,11 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@bull-board/api": "6.14.2",
+    "@bull-board/fastify": "6.14.2",
     "@fastify/cors": "11.1.0",
     "@notionhq/client": "5.4.0",
+    "bullmq": "5.65.0",
     "cron": "4.3.4",
     "dayjs": "1.11.19",
     "dotenv": "17.2.3",
