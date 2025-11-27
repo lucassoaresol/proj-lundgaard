@@ -3,3 +3,4 @@ dist
 *lock*
 .env
 logs
+pg-utils.json
