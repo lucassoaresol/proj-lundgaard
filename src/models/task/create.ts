@@ -2,6 +2,7 @@ import databaseNotionPromise from "../../db/notion";
 import dayLib from "../../libs/dayjs";
 import notion from "../../libs/notion";
 import { mapRecordTask } from "./mapRecord";
+import { mapRecordCustomer } from "../customer/mapRecord";
 
 export async function createTask(notion_id: string) {
   const database = await databaseNotionPromise
@@ -31,6 +32,36 @@ export async function createTask(notion_id: string) {
             ...propertiesData, "Cliente": { relation: [{ id: customer.notion_id }] }
           }
           dataDict = { ...dataDict, customer_id: customer.id }
+        } else {
+          const newCustomerNotion = (await notion.pages.create({ parent: { data_source_id: "2a7d4938-702d-8055-bc7d-000b6bccef16" }, properties: { "Nome": { title: [{ text: { content: data.customer } }] } }, template: { type: "template_id", template_id: "2a9d4938-702d-809e-9eee-cb6396028c87" } })) as any
+
+          const dataCustomer = mapRecordCustomer(newCustomerNotion.properties);
+
+          const newCustomer = await database.insertIntoTable<{ id: number }>({
+            table: "customers",
+            dataDict: { name: dataCustomer.name, data: dataCustomer, notion_id: newCustomerNotion.id },
+            select: { id: true },
+          });
+
+          if (newCustomer) {
+            const updateCustomer = (await notion.pages.update({
+              page_id: newCustomerNotion.id,
+              properties: { ID: { number: newCustomer.id } },
+            })) as any;
+
+            await database.updateIntoTable({
+              table: "customers",
+              dataDict: {
+                updated_at: dayLib(updateCustomer.last_edited_time).toDate(),
+              },
+              where: { id: newCustomer.id },
+            });
+
+            propertiesData = {
+              ...propertiesData, "Cliente": { relation: [{ id: newCustomerNotion.id }] }
+            }
+            dataDict = { ...dataDict, customer_id: newCustomer.id }
+          }
         }
       }
 
