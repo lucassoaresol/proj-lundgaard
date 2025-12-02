@@ -6,6 +6,11 @@ import {
   excludeCustomerQueue,
   updateCustomerQueue,
 } from "../worker/services/customer";
+import {
+  createTaskQueue,
+  excludeTaskQueue,
+  updateTaskQueue,
+} from "../worker/services/task";
 
 import { serverAdapter } from "./bull";
 
@@ -49,6 +54,16 @@ app.post(
           { attempts: 1000, backoff: { type: "exponential", delay: 5000 } },
         );
       }
+
+      if (
+        request.body.data.parent.data_source_id ===
+        "262d4938-702d-808a-bd82-000ba32e2807"
+      ) {
+        await createTaskQueue.add("save-create-task", request.body.entity.id, {
+          attempts: 1000,
+          backoff: { type: "exponential", delay: 5000 },
+        });
+      }
     }
 
     if (request.body.type === "page.properties_updated") {
@@ -62,6 +77,16 @@ app.post(
           { attempts: 1000, backoff: { type: "exponential", delay: 5000 } },
         );
       }
+
+      if (
+        request.body.data.parent.data_source_id ===
+        "262d4938-702d-808a-bd82-000ba32e2807"
+      ) {
+        await updateTaskQueue.add("save-update-task", request.body.entity.id, {
+          attempts: 1000,
+          backoff: { type: "exponential", delay: 5000 },
+        });
+      }
     }
 
     if (request.body.type === "page.deleted") {
@@ -71,6 +96,17 @@ app.post(
       ) {
         await excludeCustomerQueue.add(
           "save-exclude-customer",
+          request.body.entity.id,
+          { attempts: 1000, backoff: { type: "exponential", delay: 5000 } },
+        );
+      }
+
+      if (
+        request.body.data.parent.data_source_id ===
+        "262d4938-702d-808a-bd82-000ba32e2807"
+      ) {
+        await excludeTaskQueue.add(
+          "save-exclude-task",
           request.body.entity.id,
           { attempts: 1000, backoff: { type: "exponential", delay: 5000 } },
         );
