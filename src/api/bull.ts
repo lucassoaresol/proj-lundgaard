@@ -12,6 +12,11 @@ import {
   excludeTaskQueue,
   updateTaskQueue,
 } from "../worker/services/task";
+import {
+  createTaskCommentQueue,
+  updateTaskCommentQueue,
+  excludeTaskCommentQueue,
+} from "../worker/services/taskComment";
 
 export const serverAdapter = new FastifyAdapter();
 
@@ -25,6 +30,9 @@ createBullBoard({
     new BullMQAdapter(createTaskQueue),
     new BullMQAdapter(updateTaskQueue),
     new BullMQAdapter(excludeTaskQueue),
+    new BullMQAdapter(createTaskCommentQueue),
+    new BullMQAdapter(updateTaskCommentQueue),
+    new BullMQAdapter(excludeTaskCommentQueue),
   ],
   serverAdapter: serverAdapter,
 });

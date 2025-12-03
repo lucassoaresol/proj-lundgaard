@@ -11,6 +11,11 @@ import {
   excludeTaskQueue,
   updateTaskQueue,
 } from "../worker/services/task";
+import {
+  createTaskCommentQueue,
+  excludeTaskCommentQueue,
+  updateTaskCommentQueue,
+} from "../worker/services/taskComment";
 
 import { serverAdapter } from "./bull";
 
@@ -111,6 +116,30 @@ app.post(
           { attempts: 1000, backoff: { type: "exponential", delay: 5000 } },
         );
       }
+    }
+
+    if (request.body.type === "comment.created") {
+      await createTaskCommentQueue.add(
+        "save-create-task-comment",
+        request.body.entity.id,
+        { attempts: 1000, backoff: { type: "exponential", delay: 5000 } },
+      );
+    }
+
+    if (request.body.type === "comment.updated") {
+      await updateTaskCommentQueue.add(
+        "save-update-task-comment",
+        request.body.entity.id,
+        { attempts: 1000, backoff: { type: "exponential", delay: 5000 } },
+      );
+    }
+
+    if (request.body.type === "comment.deleted") {
+      await excludeTaskCommentQueue.add(
+        "save-exclude-task-comment",
+        request.body.entity.id,
+        { attempts: 1000, backoff: { type: "exponential", delay: 5000 } },
+      );
     }
 
     reply.send("OK");
