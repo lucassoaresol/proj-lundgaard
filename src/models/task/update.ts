@@ -14,12 +14,12 @@ export async function updateTask(notion_id: string) {
 
   if (taskData) {
     const result = (await notion.pages.retrieve({ page_id: notion_id })) as any;
-    const updated_at = result.last_edited_time
+    const updated_at = dayLib(result.last_edited_time)
     const data = mapRecordTask(result.properties);
     const { customer_id } = data
 
-    if (dayLib(updated_at).diff(taskData.updated_at) > 0) {
-      await database.updateIntoTable({ table: "tasks", dataDict: { data, customer_id, updated_at: dayLib(updated_at).toDate() }, where: { id: taskData.id } })
+    if (updated_at.diff(taskData.updated_at) > 0) {
+      await database.updateIntoTable({ table: "tasks", dataDict: { data, customer_id, updated_at: updated_at.toDate() }, where: { id: taskData.id } })
     }
   }
 }

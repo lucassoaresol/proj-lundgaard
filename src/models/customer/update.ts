@@ -14,11 +14,11 @@ export async function updateCustomer(notion_id: string) {
 
   if (customerData) {
     const result = (await notion.pages.retrieve({ page_id: notion_id })) as any;
-    const updated_at = result.last_edited_time
+    const updated_at = dayLib(result.last_edited_time)
     const data = mapRecordCustomer(result.properties);
     const { name, tasks } = data
 
-    if (dayLib(updated_at).diff(customerData.updated_at) > 0) {
+    if (updated_at.diff(customerData.updated_at) > 0) {
       const customerExistin = await database.findFirst<{ notion_id: string }>({ table: "customers", where: { name }, select: { "notion_id": true } })
 
       if (customerExistin) {
@@ -28,7 +28,7 @@ export async function updateCustomer(notion_id: string) {
         await notion.pages.update({ page_id: notion_id, in_trash: true })
         await database.deleteFromTable({ table: "customers", where: { id: customerData.id } })
       } else {
-        await database.updateIntoTable({ table: "customers", dataDict: { name, data, updated_at: dayLib(updated_at).toDate() }, where: { id: customerData.id } })
+        await database.updateIntoTable({ table: "customers", dataDict: { name, data, updated_at: updated_at.toDate() }, where: { id: customerData.id } })
       }
     }
   }

@@ -56,9 +56,3 @@ export const excludeCustomerWorker = new Worker<string>(
     prefix: "notion-lundgaard",
   },
 );
-
-
-
-
-
-
