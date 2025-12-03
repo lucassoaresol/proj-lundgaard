@@ -1,23 +1,9 @@
 import FastifyCors from "@fastify/cors";
 import Fastify, { FastifyRequest } from "fastify";
 
-import {
-  createCustomerQueue,
-  excludeCustomerQueue,
-  updateCustomerQueue,
-} from "../worker/services/customer";
-import {
-  createTaskQueue,
-  excludeTaskQueue,
-  updateTaskQueue,
-} from "../worker/services/task";
-import {
-  createTaskCommentQueue,
-  excludeTaskCommentQueue,
-  updateTaskCommentQueue,
-} from "../worker/services/taskComment";
-
 import { serverAdapter } from "./bull";
+import { receivedNotionCommentWebhook } from "./modules/comment";
+import { receivedNotionPageWebhook } from "./modules/page";
 
 const app = Fastify();
 
@@ -45,101 +31,10 @@ app.post(
     }>,
     reply,
   ) => {
-    if (
-      request.body.type === "page.created" ||
-      request.body.type === "page.undeleted"
-    ) {
-      if (
-        request.body.data.parent.data_source_id ===
-        "2a7d4938-702d-8055-bc7d-000b6bccef16"
-      ) {
-        await createCustomerQueue.add(
-          "save-create-customer",
-          request.body.entity.id,
-          { attempts: 1000, backoff: { type: "exponential", delay: 5000 } },
-        );
-      }
-
-      if (
-        request.body.data.parent.data_source_id ===
-        "262d4938-702d-808a-bd82-000ba32e2807"
-      ) {
-        await createTaskQueue.add("save-create-task", request.body.entity.id, {
-          attempts: 1000,
-          backoff: { type: "exponential", delay: 5000 },
-        });
-      }
-    }
-
-    if (request.body.type === "page.properties_updated") {
-      if (
-        request.body.data.parent.data_source_id ===
-        "2a7d4938-702d-8055-bc7d-000b6bccef16"
-      ) {
-        await updateCustomerQueue.add(
-          "save-update-customer",
-          request.body.entity.id,
-          { attempts: 1000, backoff: { type: "exponential", delay: 5000 } },
-        );
-      }
-
-      if (
-        request.body.data.parent.data_source_id ===
-        "262d4938-702d-808a-bd82-000ba32e2807"
-      ) {
-        await updateTaskQueue.add("save-update-task", request.body.entity.id, {
-          attempts: 1000,
-          backoff: { type: "exponential", delay: 5000 },
-        });
-      }
-    }
-
-    if (request.body.type === "page.deleted") {
-      if (
-        request.body.data.parent.data_source_id ===
-        "2a7d4938-702d-8055-bc7d-000b6bccef16"
-      ) {
-        await excludeCustomerQueue.add(
-          "save-exclude-customer",
-          request.body.entity.id,
-          { attempts: 1000, backoff: { type: "exponential", delay: 5000 } },
-        );
-      }
-
-      if (
-        request.body.data.parent.data_source_id ===
-        "262d4938-702d-808a-bd82-000ba32e2807"
-      ) {
-        await excludeTaskQueue.add(
-          "save-exclude-task",
-          request.body.entity.id,
-          { attempts: 1000, backoff: { type: "exponential", delay: 5000 } },
-        );
-      }
-    }
-
-    if (request.body.type === "comment.created") {
-      await createTaskCommentQueue.add(
-        "save-create-task-comment",
-        request.body.entity.id,
-        { attempts: 1000, backoff: { type: "exponential", delay: 5000 } },
-      );
-    }
-
-    if (request.body.type === "comment.updated") {
-      await updateTaskCommentQueue.add(
-        "save-update-task-comment",
-        request.body.entity.id,
-        { attempts: 1000, backoff: { type: "exponential", delay: 5000 } },
-      );
-    }
-
-    if (request.body.type === "comment.deleted") {
-      await excludeTaskCommentQueue.add(
-        "save-exclude-task-comment",
-        request.body.entity.id,
-        { attempts: 1000, backoff: { type: "exponential", delay: 5000 } },
-      );
+    if (request.body.type.includes("page")) {
+      await receivedNotionPageWebhook(request.body);
+    } else if (request.body.type.includes("comment")) {
+      await receivedNotionCommentWebhook(request.body);
     }
 
     reply.send("OK");
