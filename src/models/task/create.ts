@@ -1,8 +1,9 @@
+import { env } from "../../config/env";
 import databaseNotionPromise from "../../db/notion";
 import dayLib from "../../libs/dayjs";
 import notion from "../../libs/notion";
-import { mapRecordTask } from "./mapRecord";
 import { mapRecordCustomer } from "../customer/mapRecord";
+import { mapRecordTask } from "./mapRecord";
 
 export async function createTask(notion_id: string) {
   const database = await databaseNotionPromise
@@ -33,7 +34,7 @@ export async function createTask(notion_id: string) {
           }
           dataDict = { ...dataDict, customer_id: customer.id }
         } else {
-          const newCustomerNotion = (await notion.pages.create({ parent: { data_source_id: "2a7d4938-702d-8055-bc7d-000b6bccef16" }, properties: { "Nome": { title: [{ text: { content: data.customer } }] } }, template: { type: "template_id", template_id: "2a9d4938-702d-809e-9eee-cb6396028c87" } })) as any
+          const newCustomerNotion = (await notion.pages.create({ parent: { data_source_id: env.dataSourceCustomer }, properties: { "Nome": { title: [{ text: { content: data.customer } }] } }, template: { type: "template_id", template_id: env.templateCustomer } })) as any
 
           const dataCustomer = mapRecordCustomer(newCustomerNotion.properties);
 

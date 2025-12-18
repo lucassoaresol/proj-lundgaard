@@ -1,5 +1,6 @@
-import { createCustomerQueue, updateCustomerQueue, excludeCustomerQueue } from "../../worker/services/customer";
-import { createTaskQueue, updateTaskQueue, excludeTaskQueue } from "../../worker/services/task";
+import { env } from "../../config/env";
+import { createCustomerQueue, excludeCustomerQueue, updateCustomerQueue } from "../../worker/services/customer";
+import { createTaskQueue, excludeTaskQueue, updateTaskQueue } from "../../worker/services/task";
 
 export async function receivedNotionPageWebhook(body: {
   entity: { id: string };
@@ -16,7 +17,7 @@ export async function receivedNotionPageWebhook(body: {
   ) {
     if (
       body.data.parent.data_source_id ===
-      "2a7d4938-702d-8055-bc7d-000b6bccef16"
+      env.dataSourceCustomer
     ) {
       await createCustomerQueue.add(
         "save-create-customer",
@@ -27,7 +28,7 @@ export async function receivedNotionPageWebhook(body: {
 
     if (
       body.data.parent.data_source_id ===
-      "262d4938-702d-808a-bd82-000ba32e2807"
+      env.dataSourceTask
     ) {
       await createTaskQueue.add("save-create-task", body.entity.id, {
         attempts: 1000,
@@ -39,7 +40,7 @@ export async function receivedNotionPageWebhook(body: {
   if (body.type === "page.properties_updated") {
     if (
       body.data.parent.data_source_id ===
-      "2a7d4938-702d-8055-bc7d-000b6bccef16"
+      env.dataSourceCustomer
     ) {
       await updateCustomerQueue.add(
         "save-update-customer",
@@ -50,7 +51,7 @@ export async function receivedNotionPageWebhook(body: {
 
     if (
       body.data.parent.data_source_id ===
-      "262d4938-702d-808a-bd82-000ba32e2807"
+      env.dataSourceTask
     ) {
       await updateTaskQueue.add("save-update-task", body.entity.id, {
         attempts: 1000,
@@ -62,7 +63,7 @@ export async function receivedNotionPageWebhook(body: {
   if (body.type === "page.deleted") {
     if (
       body.data.parent.data_source_id ===
-      "2a7d4938-702d-8055-bc7d-000b6bccef16"
+      env.dataSourceCustomer
     ) {
       await excludeCustomerQueue.add(
         "save-exclude-customer",
@@ -73,7 +74,7 @@ export async function receivedNotionPageWebhook(body: {
 
     if (
       body.data.parent.data_source_id ===
-      "262d4938-702d-808a-bd82-000ba32e2807"
+      env.dataSourceTask
     ) {
       await excludeTaskQueue.add(
         "save-exclude-task",
