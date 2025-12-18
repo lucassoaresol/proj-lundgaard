@@ -1,16 +1,9 @@
-import { NotionTitleProp, NotionRelationProp, NotionText } from "../../config/types"
+import { NotionTitleProp, NotionRelationProp } from "../../config/types"
+import { joinPlainText } from "../../utils/joinPlainText"
 
 type Properties = {
   ["Nome"]?: NotionTitleProp
   ["Tasks"]?: NotionRelationProp
-}
-
-function joinPlainText(chunks?: NotionText[]) {
-  if (!chunks?.length) return undefined
-  const contents = chunks
-    .map(c => c?.text?.content?.trim())
-    .filter(Boolean) as string[]
-  return contents.length ? contents.join(" ") : undefined
 }
 
 export function mapRecordCustomer(properties: Properties) {

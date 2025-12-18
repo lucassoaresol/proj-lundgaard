@@ -1,4 +1,5 @@
-import { NotionPeopleProp, NotionRichTextProp, NotionRollupProp, NotionSelectProp, NotionStatusProp, NotionText, NotionTitleProp } from "../../config/types"
+import { NotionPeopleProp, NotionRichTextProp, NotionRollupProp, NotionSelectProp, NotionStatusProp, NotionTitleProp } from "../../config/types"
+import { joinPlainText } from "../../utils/joinPlainText"
 
 type Properties = {
   ["Nome"]?: NotionTitleProp
@@ -10,14 +11,6 @@ type Properties = {
   ["Pessoa"]?: NotionPeopleProp
   ["Team"]?: NotionSelectProp
   ["Cliente ID"]?: NotionRollupProp
-}
-
-function joinPlainText(chunks?: NotionText[]) {
-  if (!chunks?.length) return undefined
-  const contents = chunks
-    .map(c => c?.text?.content?.trim())
-    .filter(Boolean) as string[]
-  return contents.length ? contents.join(" ") : undefined
 }
 
 export function mapRecordTask(properties: Properties) {
