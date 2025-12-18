@@ -14,9 +14,14 @@ import {
 } from "../worker/services/task";
 import {
   createTaskCommentQueue,
-  updateTaskCommentQueue,
   excludeTaskCommentQueue,
+  updateTaskCommentQueue,
 } from "../worker/services/taskComment";
+import {
+  createYearQueue,
+  updateYearQueue,
+  excludeYearQueue,
+} from "../worker/services/year";
 
 export const serverAdapter = new FastifyAdapter();
 
@@ -33,6 +38,9 @@ createBullBoard({
     new BullMQAdapter(createTaskCommentQueue),
     new BullMQAdapter(updateTaskCommentQueue),
     new BullMQAdapter(excludeTaskCommentQueue),
+    new BullMQAdapter(createYearQueue),
+    new BullMQAdapter(updateYearQueue),
+    new BullMQAdapter(excludeYearQueue),
   ],
   serverAdapter: serverAdapter,
 });

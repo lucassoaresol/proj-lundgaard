@@ -11,6 +11,8 @@ const schema = z.object({
   dataSourceCustomer: z.uuid(),
   templateCustomer: z.uuid(),
   dataSourceTask: z.uuid(),
+  dataSourceYear: z.uuid(),
+  templateYear: z.uuid(),
 });
 
 export const env = schema.parse({
@@ -20,4 +22,6 @@ export const env = schema.parse({
   dataSourceCustomer: process.env.DATA_SOURCE_CUSTOMER,
   templateCustomer: process.env.TEMPLATE_CUSTOMER,
   dataSourceTask: process.env.DATA_SOURCE_TASK,
+  dataSourceYear: process.env.DATA_SOURCE_YEAR,
+  templateYear: process.env.TEMPLATE_YEAR,
 });

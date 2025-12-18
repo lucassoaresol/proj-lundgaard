@@ -1,6 +1,7 @@
 import { env } from "../../config/env";
 import { createCustomerQueue, excludeCustomerQueue, updateCustomerQueue } from "../../worker/services/customer";
 import { createTaskQueue, excludeTaskQueue, updateTaskQueue } from "../../worker/services/task";
+import { createYearQueue, excludeYearQueue, updateYearQueue } from "../../worker/services/year";
 
 export async function receivedNotionPageWebhook(body: {
   entity: { id: string };
@@ -35,6 +36,16 @@ export async function receivedNotionPageWebhook(body: {
         backoff: { type: "exponential", delay: 5000 },
       });
     }
+
+    if (
+      body.data.parent.data_source_id ===
+      env.dataSourceYear
+    ) {
+      await createYearQueue.add("save-create-year", body.entity.id, {
+        attempts: 1000,
+        backoff: { type: "exponential", delay: 5000 },
+      });
+    }
   }
 
   if (body.type === "page.properties_updated") {
@@ -58,6 +69,17 @@ export async function receivedNotionPageWebhook(body: {
         backoff: { type: "exponential", delay: 5000 },
       });
     }
+
+    if (
+      body.data.parent.data_source_id ===
+      env.dataSourceYear
+    ) {
+      await updateYearQueue.add(
+        "save-update-year",
+        body.entity.id,
+        { attempts: 1000, backoff: { type: "exponential", delay: 5000 } },
+      );
+    }
   }
 
   if (body.type === "page.deleted") {
@@ -78,6 +100,17 @@ export async function receivedNotionPageWebhook(body: {
     ) {
       await excludeTaskQueue.add(
         "save-exclude-task",
+        body.entity.id,
+        { attempts: 1000, backoff: { type: "exponential", delay: 5000 } },
+      );
+    }
+
+    if (
+      body.data.parent.data_source_id ===
+      env.dataSourceYear
+    ) {
+      await excludeYearQueue.add(
+        "save-exclude-year",
         body.entity.id,
         { attempts: 1000, backoff: { type: "exponential", delay: 5000 } },
       );
