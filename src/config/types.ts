@@ -7,6 +7,7 @@ export type NotionRichTextProp = { rich_text?: NotionText[] };
 export type NotionRelationProp = { relation?: { id: string }[] };
 export type NotionSelectProp = { select?: { name: string } };
 export type NotionStatusProp = { status?: { name: string } };
+export type NotionDateProp = { date?: { start: string } };
 export type NotionRollupProp = { rollup?: { array: any[] } };
 export type NotionPeopleProp = { people?: { name: string }[] };
 export type NotionRich = {
