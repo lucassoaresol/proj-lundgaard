@@ -26,6 +26,8 @@ export async function createTask(notion_id: string) {
       let propertiesData = {}
       let dataDict = {}
 
+      propertiesData = { "Editable": { checkbox: true } }
+
       if (customer) {
         propertiesData = {
           ...propertiesData, "Cliente": { relation: [{ id: customer.notion_id }] }

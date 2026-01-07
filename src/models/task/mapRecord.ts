@@ -1,4 +1,4 @@
-import { NotionDateProp, NotionPeopleProp, NotionRichTextProp, NotionRollupProp, NotionSelectProp, NotionStatusProp, NotionTitleProp } from "../../config/types"
+import { NotionCheckboxProp, NotionDateProp, NotionPeopleProp, NotionRichTextProp, NotionRollupProp, NotionSelectProp, NotionStatusProp, NotionTitleProp } from "../../config/types"
 import { joinPlainText } from "../../utils/joinPlainText"
 
 type Properties = {
@@ -12,6 +12,7 @@ type Properties = {
   ["Pessoa"]?: NotionPeopleProp
   ["Team"]?: NotionSelectProp
   ["Cliente ID"]?: NotionRollupProp
+  ["Editable"]?: NotionCheckboxProp
 }
 
 export function mapRecordTask(properties: Properties) {
@@ -27,6 +28,7 @@ export function mapRecordTask(properties: Properties) {
   const people = properties?.["Pessoa"]?.people?.[0]?.name ?? undefined
   const team = properties?.["Team"]?.select?.name ?? ""
   const customer_id = properties?.["Cliente ID"]?.rollup?.array?.[0]?.number ?? undefined
+  const is_editable = properties?.["Editable"]?.checkbox ?? false
 
-  return { name: name.toUpperCase(), customer, devis, status, notes, completed_at, assignee, people, team, customer_id }
+  return { name: name.toUpperCase(), customer, devis, status, notes, completed_at, assignee, people, team, customer_id, is_editable }
 }
