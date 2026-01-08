@@ -1,3 +1,4 @@
+import "./completedTask";
 import "./customer";
 import "./task";
 import "./taskComment";

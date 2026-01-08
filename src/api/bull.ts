@@ -3,19 +3,24 @@ import { BullMQAdapter } from "@bull-board/api/bullMQAdapter";
 import { FastifyAdapter } from "@bull-board/fastify";
 
 import {
+  createCompletedTaskQueue,
+  updateCompletedTaskQueue,
+  excludeCompletedTaskQueue,
+} from "../worker/services/completedTask";
+import {
   createCustomerQueue,
-  excludeCustomerQueue,
   updateCustomerQueue,
+  excludeCustomerQueue,
 } from "../worker/services/customer";
 import {
   createTaskQueue,
-  excludeTaskQueue,
   updateTaskQueue,
+  excludeTaskQueue,
 } from "../worker/services/task";
 import {
   createTaskCommentQueue,
-  excludeTaskCommentQueue,
   updateTaskCommentQueue,
+  excludeTaskCommentQueue,
 } from "../worker/services/taskComment";
 import {
   createYearQueue,
@@ -41,6 +46,9 @@ createBullBoard({
     new BullMQAdapter(createYearQueue),
     new BullMQAdapter(updateYearQueue),
     new BullMQAdapter(excludeYearQueue),
+    new BullMQAdapter(createCompletedTaskQueue),
+    new BullMQAdapter(updateCompletedTaskQueue),
+    new BullMQAdapter(excludeCompletedTaskQueue),
   ],
   serverAdapter: serverAdapter,
 });
