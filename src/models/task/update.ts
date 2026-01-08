@@ -8,10 +8,10 @@ import { mapRecordTask } from "./mapRecord";
 export async function updateTask(notion_id: string) {
   const database = await databaseNotionPromise
 
-  const taskData = await database.findFirst<{ id: number, updated_at: Date }>({
+  const taskData = await database.findFirst<{ id: number, data: any, updated_at: Date }>({
     table: "tasks",
     where: { notion_id },
-    select: { id: true, updated_at: true },
+    select: { id: true, data: true, updated_at: true },
   });
 
   if (taskData) {
@@ -35,6 +35,12 @@ export async function updateTask(notion_id: string) {
         }
       } else {
         await database.updateIntoTable({ table: "tasks", dataDict: { data, customer_id, updated_at: updated_at.toDate() }, where: { id: taskData.id } })
+      }
+
+      if (data.people && data.people !== taskData.data.people) {
+        const updateTask = (await notion.pages.update({ page_id: notion_id, properties: { "Assignee": { select: { name: data.people } } } })) as any
+        updated_at = dayLib(updateTask.last_edited_time)
+        await database.updateIntoTable({ table: "tasks", dataDict: { data, updated_at: updated_at.toDate() }, where: { id: taskData.id } })
       }
     }
   } else {
