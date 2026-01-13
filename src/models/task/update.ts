@@ -17,7 +17,7 @@ export async function updateTask(notion_id: string) {
   if (taskData) {
     const result = (await notion.pages.retrieve({ page_id: notion_id })) as any;
     let updated_at = dayLib(result.last_edited_time)
-    const data = mapRecordTask(result.properties);
+    let data = mapRecordTask(result.properties);
     const { customer_id } = data
 
     if (updated_at.diff(taskData.updated_at) > 0) {
@@ -25,12 +25,14 @@ export async function updateTask(notion_id: string) {
       if (!customer_id && customer) {
         const updateTask = (await notion.pages.update({ page_id: notion_id, properties: { "Cliente": { relation: [{ id: customer.notion_id }] } } })) as any
         updated_at = dayLib(updateTask.last_edited_time)
+        data = mapRecordTask(updateTask.properties);
         await database.updateIntoTable({ table: "tasks", dataDict: { data, customer_id: customer.id, updated_at: updated_at.toDate() }, where: { id: taskData.id } })
       } else if (customer && data.customer !== customer.name) {
         customer = await retrieveCustomer(data.customer)
         if (customer) {
           const updateTask = (await notion.pages.update({ page_id: notion_id, properties: { "Cliente": { relation: [{ id: customer.notion_id }] } } })) as any
           updated_at = dayLib(updateTask.last_edited_time)
+          data = mapRecordTask(updateTask.properties);
           await database.updateIntoTable({ table: "tasks", dataDict: { data, customer_id: customer.id, updated_at: updated_at.toDate() }, where: { id: taskData.id } })
         }
       } else {
@@ -40,6 +42,7 @@ export async function updateTask(notion_id: string) {
       if (data.people && data.people !== taskData.data.people) {
         const updateTask = (await notion.pages.update({ page_id: notion_id, properties: { "Assignee": { select: { name: data.people } } } })) as any
         updated_at = dayLib(updateTask.last_edited_time)
+        data = mapRecordTask(updateTask.properties);
         await database.updateIntoTable({ table: "tasks", dataDict: { data, updated_at: updated_at.toDate() }, where: { id: taskData.id } })
       }
     }
