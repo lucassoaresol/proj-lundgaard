@@ -19,7 +19,7 @@ export async function updateCustomer(notion_id: string) {
     const { name, tasks } = data
 
     if (updated_at.diff(customerData.updated_at) > 0) {
-      const customerExistin = await database.findFirst<{ notion_id: string }>({ table: "customers", where: { name }, select: { "notion_id": true } })
+      const customerExistin = await database.findFirst<{ notion_id: string }>({ table: "customers", where: { name, notion_id: { value: notion_id, is_not: true } }, select: { "notion_id": true } })
 
       if (customerExistin) {
         for (const taskId of tasks) {

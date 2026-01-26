@@ -28,7 +28,7 @@ export async function createCustomer(notion_id: string) {
       if (newCustomer) {
         const updateCustomer = (await notion.pages.update({
           page_id: notion_id,
-          properties: { ID: { number: newCustomer.id } },
+          properties: { ID: { title: [{ text: { content: name } }], number: newCustomer.id } },
         })) as any;
 
         await database.updateIntoTable({
