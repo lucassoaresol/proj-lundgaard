@@ -1,8 +1,7 @@
 import databaseNotionPromise from "../../db/notion";
 import dayLib from "../../libs/dayjs";
 import notion from "../../libs/notion";
-import { createTaskQueue } from "../../worker/services/task";
-import { retrieveCustomer } from "../customer/retrieve";
+import { createTaskQueue, updateTaskAssigneeQueue, updateTaskCustomerQueue } from "../../worker/services/task";
 import { mapRecordTask } from "./mapRecord";
 
 export async function updateTask(notion_id: string) {
@@ -16,34 +15,22 @@ export async function updateTask(notion_id: string) {
 
   if (taskData) {
     const result = (await notion.pages.retrieve({ page_id: notion_id })) as any;
-    let updated_at = dayLib(result.last_edited_time)
-    let data = mapRecordTask(result.properties);
-    const { customer_id } = data
+    const updated_at = dayLib(result.last_edited_time)
+    const data = mapRecordTask(result.properties);
 
     if (updated_at.diff(taskData.updated_at) > 0) {
-      let customer = await retrieveCustomer(data.customer, customer_id)
-      if (!customer_id && customer) {
-        const updateTask = (await notion.pages.update({ page_id: notion_id, properties: { "Cliente": { relation: [{ id: customer.notion_id }] } } })) as any
-        updated_at = dayLib(updateTask.last_edited_time)
-        data = mapRecordTask(updateTask.properties);
-        await database.updateIntoTable({ table: "tasks", dataDict: { data, customer_id: customer.id, updated_at: updated_at.toDate() }, where: { id: taskData.id } })
-      } else if (customer && data.customer !== customer.name) {
-        customer = await retrieveCustomer(data.customer)
-        if (customer) {
-          const updateTask = (await notion.pages.update({ page_id: notion_id, properties: { "Cliente": { relation: [{ id: customer.notion_id }] } } })) as any
-          updated_at = dayLib(updateTask.last_edited_time)
-          data = mapRecordTask(updateTask.properties);
-          await database.updateIntoTable({ table: "tasks", dataDict: { data, customer_id: customer.id, updated_at: updated_at.toDate() }, where: { id: taskData.id } })
-        }
-      } else {
-        await database.updateIntoTable({ table: "tasks", dataDict: { data, customer_id, updated_at: updated_at.toDate() }, where: { id: taskData.id } })
-      }
+      await database.updateIntoTable({ table: "tasks", dataDict: { data, customer_id: data.customer_id, updated_at: updated_at.toDate() }, where: { id: taskData.id } })
+
+      await updateTaskCustomerQueue.add("save-update-task-customer", { notion_id, project: data.customer, customer_id: data.customer_id }, {
+        attempts: 1000,
+        backoff: { type: "exponential", delay: 5000 },
+      });
 
       if (data.people && data.people !== taskData.data.people) {
-        const updateTask = (await notion.pages.update({ page_id: notion_id, properties: { "Assignee": { select: { name: data.people } } } })) as any
-        updated_at = dayLib(updateTask.last_edited_time)
-        data = mapRecordTask(updateTask.properties);
-        await database.updateIntoTable({ table: "tasks", dataDict: { data, updated_at: updated_at.toDate() }, where: { id: taskData.id } })
+        await updateTaskAssigneeQueue.add("save-update-task-assignee", { notion_id, assignee: data.people }, {
+          attempts: 1000,
+          backoff: { type: "exponential", delay: 5000 },
+        });
       }
     }
   } else {

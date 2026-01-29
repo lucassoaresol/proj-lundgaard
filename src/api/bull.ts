@@ -16,6 +16,8 @@ import {
   createTaskQueue,
   updateTaskQueue,
   excludeTaskQueue,
+  updateTaskAssigneeQueue,
+  updateTaskCustomerQueue,
 } from "../worker/services/task";
 import {
   createTaskCommentQueue,
@@ -39,6 +41,8 @@ createBullBoard({
     new BullMQAdapter(excludeCustomerQueue),
     new BullMQAdapter(createTaskQueue),
     new BullMQAdapter(updateTaskQueue),
+    new BullMQAdapter(updateTaskAssigneeQueue),
+    new BullMQAdapter(updateTaskCustomerQueue),
     new BullMQAdapter(excludeTaskQueue),
     new BullMQAdapter(createTaskCommentQueue),
     new BullMQAdapter(updateTaskCommentQueue),

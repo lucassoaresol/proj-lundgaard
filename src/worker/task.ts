@@ -1,6 +1,8 @@
 import {
   createTaskWorker,
   excludeTaskWorker,
+  updateTaskAssigneeWorker,
+  updateTaskCustomerWorker,
   updateTaskWorker,
 } from "./services/task";
 
@@ -42,6 +44,34 @@ updateTaskWorker.on("completed", (job) => {
 updateTaskWorker.on("failed", async (job, err) => {
   console.error(
     `❌ [Erro] [UPDATE TASK] Falha ao processar a tarefa ID ${job?.id}. Motivo: ${err.message}`,
+  );
+  console.error(`Detalhes do Job: ${JSON.stringify(job?.data)}`);
+});
+
+updateTaskAssigneeWorker.on("completed", (job) => {
+  console.log(
+    `✅ [Sucesso] [UPDATE TASK ASSIGNEE] Tarefa ID ${job.id} processada com sucesso.`,
+  );
+  console.log(`Detalhes do Job: ${JSON.stringify(job.data)}`);
+});
+
+updateTaskAssigneeWorker.on("failed", async (job, err) => {
+  console.error(
+    `❌ [Erro] [UPDATE TASK ASSIGNEE] Falha ao processar a tarefa ID ${job?.id}. Motivo: ${err.message}`,
+  );
+  console.error(`Detalhes do Job: ${JSON.stringify(job?.data)}`);
+});
+
+updateTaskCustomerWorker.on("completed", (job) => {
+  console.log(
+    `✅ [Sucesso] [UPDATE TASK CUSTOMER] Tarefa ID ${job.id} processada com sucesso.`,
+  );
+  console.log(`Detalhes do Job: ${JSON.stringify(job.data)}`);
+});
+
+updateTaskCustomerWorker.on("failed", async (job, err) => {
+  console.error(
+    `❌ [Erro] [UPDATE TASK CUSTOMER] Falha ao processar a tarefa ID ${job?.id}. Motivo: ${err.message}`,
   );
   console.error(`Detalhes do Job: ${JSON.stringify(job?.data)}`);
 });

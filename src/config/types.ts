@@ -10,7 +10,7 @@ export type NotionStatusProp = { status?: { name: string } };
 export type NotionDateProp = { date?: { start: string } };
 export type NotionCheckboxProp = { checkbox?: boolean };
 export type NotionRollupProp = { rollup?: { array: any[] } };
-export type NotionPeopleProp = { people?: { name: string }[] };
+export type NotionPeopleProp = { people?: { id: string; name: string }[] };
 export type NotionRich = {
   rich_text?: { text?: { content?: string } }[];
   title?: { text?: { content?: string } }[];
