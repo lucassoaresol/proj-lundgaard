@@ -8,6 +8,13 @@ import {
   excludeCompletedTaskQueue,
 } from "../queues";
 import {
+  createCompletedTaskDevQueue, updateCompletedTaskDevQueue, excludeCompletedTaskDevQueue,
+  createCustomerDevQueue, updateCustomerDevQueue, excludeCustomerDevQueue,
+  createTaskDevQueue, updateTaskDevQueue, excludeTaskDevQueue,
+  createTaskCommentDevQueue, updateTaskCommentDevQueue, excludeTaskCommentDevQueue,
+  createYearDevQueue, updateYearDevQueue, excludeYearDevQueue,
+} from "../queues";
+import {
   createCustomerQueue,
   updateCustomerQueue,
   excludeCustomerQueue,
@@ -53,6 +60,21 @@ createBullBoard({
     new BullMQAdapter(createCompletedTaskQueue),
     new BullMQAdapter(updateCompletedTaskQueue),
     new BullMQAdapter(excludeCompletedTaskQueue),
+    new BullMQAdapter(createCustomerDevQueue),
+    new BullMQAdapter(updateCustomerDevQueue),
+    new BullMQAdapter(excludeCustomerDevQueue),
+    new BullMQAdapter(createTaskDevQueue),
+    new BullMQAdapter(updateTaskDevQueue),
+    new BullMQAdapter(excludeTaskDevQueue),
+    new BullMQAdapter(createTaskCommentDevQueue),
+    new BullMQAdapter(updateTaskCommentDevQueue),
+    new BullMQAdapter(excludeTaskCommentDevQueue),
+    new BullMQAdapter(createYearDevQueue),
+    new BullMQAdapter(updateYearDevQueue),
+    new BullMQAdapter(excludeYearDevQueue),
+    new BullMQAdapter(createCompletedTaskDevQueue),
+    new BullMQAdapter(updateCompletedTaskDevQueue),
+    new BullMQAdapter(excludeCompletedTaskDevQueue),
   ],
   serverAdapter: serverAdapter,
 });

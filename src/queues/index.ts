@@ -31,3 +31,23 @@ export const excludeYearQueue = new Queue<string>("exclude-year", options);
 export const createCompletedTaskQueue = new Queue<CompletedTaskJob>("create-completed-task", options);
 export const updateCompletedTaskQueue = new Queue<CompletedTaskJob>("update-completed-task", options);
 export const excludeCompletedTaskQueue = new Queue<string>("exclude-completed-task", options);
+
+export const createCustomerDevQueue = new Queue<string>("create-customer-dev", options);
+export const updateCustomerDevQueue = new Queue<string>("update-customer-dev", options);
+export const excludeCustomerDevQueue = new Queue<string>("exclude-customer-dev", options);
+
+export const createTaskDevQueue = new Queue<string>("create-task-dev", options);
+export const updateTaskDevQueue = new Queue<string>("update-task-dev", options);
+export const excludeTaskDevQueue = new Queue<string>("exclude-task-dev", options);
+
+export const createTaskCommentDevQueue = new Queue<string>("create-task-comment-dev", options);
+export const updateTaskCommentDevQueue = new Queue<string>("update-task-comment-dev", options);
+export const excludeTaskCommentDevQueue = new Queue<string>("exclude-task-comment-dev", options);
+
+export const createYearDevQueue = new Queue<string>("create-year-dev", options);
+export const updateYearDevQueue = new Queue<string>("update-year-dev", options);
+export const excludeYearDevQueue = new Queue<string>("exclude-year-dev", options);
+
+export const createCompletedTaskDevQueue = new Queue<CompletedTaskJob>("create-completed-task-dev", options);
+export const updateCompletedTaskDevQueue = new Queue<CompletedTaskJob>("update-completed-task-dev", options);
+export const excludeCompletedTaskDevQueue = new Queue<string>("exclude-completed-task-dev", options);

@@ -26,6 +26,7 @@
     "dayjs": "1.11.19",
     "dotenv": "17.2.3",
     "fastify": "5.6.2",
+    "json-2-csv": "^5.5.10",
     "pg-utils": "github:lucassoaresol/pg-utils",
     "zod": "4.1.13"
   },

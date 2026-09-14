@@ -4,7 +4,7 @@ import { getLocalIPs } from "../utils/getLocalIP";
 import app from "./app";
 
 async function main() {
-  await app.listen({ host: "0.0.0.0", port: env.port });
+  await app.listen({ host: "127.0.0.1", port: env.port });
 
   const ips = getLocalIPs();
 

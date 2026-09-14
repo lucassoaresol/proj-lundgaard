@@ -15,7 +15,7 @@ function taskRef(notionId: string): string {
 CronJob.from({
   cronTime: "0 0 * * *",
   onTick: () => {
-    const dirs = ["logs"];
+    const dirs = ["logs", "public"];
     dirs.forEach((el) =>
       runShellScript(`find ${el} -type f -mtime +5 -exec rm {} \\;`),
     );
@@ -29,13 +29,11 @@ CronJob.from({
     const database = await databaseNotionPromise;
 
     const tasks = await database.findMany<{
-      id: number;
-      data: any;
       notion_id: string;
     }>({
       table: "tasks",
       where: { customer_id: null },
-      select: { id: true, data: true, notion_id: true },
+      select: { notion_id: true },
     });
 
     for (const task of tasks) {

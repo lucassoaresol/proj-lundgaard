@@ -1,4 +1,4 @@
-import { MONTHS } from "../../config/const";
+import { MONTHS_NUM } from "../../config/const";
 import databaseNotionPromise from "../../db/notion";
 import dayLib from "../../libs/dayjs";
 import notion from "../../libs/notion";
@@ -37,7 +37,7 @@ export async function createCompletedTask(notion_id: string, data_source_id: num
       if (!data.month && data.completion_dates.length > 2) {
         const month = data.completion_dates.split(" - ")[1].split(" ")[0];
         propertiesData = {
-          ...propertiesData, "Month": { select: { name: MONTHS[month.toUpperCase()] } }
+          ...propertiesData, "Month": { select: { name: MONTHS_NUM[month.toUpperCase()] } }
         };
       }
 

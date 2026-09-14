@@ -1,4 +1,5 @@
 import databaseNotionPromise from "../../db/notion";
+import { MONTHS_NUM } from "../../config/const";
 import dayLib from "../../libs/dayjs";
 import notion from "../../libs/notion";
 import { createCompletedTaskQueue } from "../../queues";
@@ -45,6 +46,14 @@ export async function updateCompletedTask(notion_id: string, data_source_id: num
         updated_at = dayLib(updateCompletedTask.last_edited_time)
         data = mapRecordCompletedTask(updateCompletedTask.properties);
         await database.updateIntoTable({ table: "completed_tasks", dataDict: { data, updated_at: updated_at.toDate() }, where: { id: completedTaskData.id } })
+      }
+
+      if (!data.month && data.completion_dates.length > 2) {
+        const month = data.completion_dates.split(" - ")[1].split(" ")[0];
+        const updatedPage = (await notion.pages.update({ page_id: notion_id, properties: { "Month": { select: { name: MONTHS_NUM[month.toUpperCase()] } } } })) as any;
+        updated_at = dayLib(updatedPage.last_edited_time);
+        data = mapRecordCompletedTask(updatedPage.properties);
+        await database.updateIntoTable({ table: "completed_tasks", dataDict: { data, updated_at: updated_at.toDate() }, where: { id: completedTaskData.id } });
       }
     }
   } else {

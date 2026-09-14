@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="pt-BR">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Exportar CSV - Clientes</title>
+</head>
+
+<body>
+  <h1>Exportar CSV por Cliente</h1>
+  <form id="exportForm">
+    <label for="customerSelect">Selecione o cliente:</label>
+    <select id="customerSelect" name="customerId"></select>
+    <button type="submit">Gerar CSV</button>
+  </form>
+  <div id="message"></div>
+
+  <script>
+    async function loadCustomers() {
+      const res = await fetch('/api/customers');
+      if (!res.ok) {
+        document.getElementById('message').innerText = 'Erro ao carregar clientes';
+        return;
+      }
+      const customers = await res.json();
+      const select = document.getElementById('customerSelect');
+      customers.forEach(c => {
+        const opt = document.createElement('option');
+        opt.value = c.id;
+        opt.text = c.name;
+        select.appendChild(opt);
+      });
+    }
+
+    document.getElementById('exportForm').addEventListener('submit', async (ev) => {
+      ev.preventDefault();
+      const select = document.getElementById('customerSelect');
+      const customerId = select.value;
+      document.getElementById('message').innerText = 'Gerando CSV...';
+
+      try {
+        const res = await fetch('/export-csv', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ customerId: Number(customerId) })
+        });
+
+        if (!res.ok) {
+          document.getElementById('message').innerText = 'Erro ao gerar CSV';
+          return;
+        }
+
+        const blob = await res.blob();
+
+        // Extrai `filename*` ou `filename` de forma robusta
+        function extractFilename(header) {
+          if (!header) return null;
+          // tenta filename* (RFC 5987)
+          const mStar = header.match(/filename\*=(?:UTF-8'')?([^;]*)/i);
+          if (mStar && mStar[1]) return decodeURIComponent(mStar[1]);
+          // tenta filename simples
+          const m = header.match(/filename=(?:"([^\"]+)"|([^;\s]+))/i);
+          if (m) return m[1] || m[2];
+          return null;
+        }
+
+        const filename = extractFilename(res.headers.get('Content-Disposition')) || `cliente-${customerId}.csv`;
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(url);
+        document.getElementById('message').innerText = 'Download iniciado';
+      } catch (err) {
+        document.getElementById('message').innerText = 'Erro inesperado';
+      }
+    });
+
+    loadCustomers();
+  </script>
+</body>
+
+</html>

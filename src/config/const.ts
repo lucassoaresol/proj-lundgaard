@@ -1,4 +1,4 @@
-export const MONTHS: Record<string, string> = {
+export const MONTHS_NUM: Record<string, string> = {
   JANUARY: "01",
   FEBRUARY: "02",
   MARCH: "03",
@@ -12,3 +12,7 @@ export const MONTHS: Record<string, string> = {
   NOVEMBER: "11",
   DECEMBER: "12",
 };
+
+export const MONTHS_NAME: Record<string, string> = Object.fromEntries(
+  Object.entries(MONTHS_NUM).map(([name, number]) => [number, name]),
+);
