@@ -1,4 +1,5 @@
-import { createTaskCommentQueue, updateTaskCommentQueue, excludeTaskCommentQueue } from "../../worker/services/taskComment";
+import { createTaskCommentQueue, updateTaskCommentQueue, excludeTaskCommentQueue } from "../../queues";
+import { CONTROLLED_RETRY_OPTIONS } from "../../worker/retryPolicy";
 
 export async function receivedNotionCommentWebhook(body: {
   entity: { id: string };
@@ -13,7 +14,7 @@ export async function receivedNotionCommentWebhook(body: {
     await createTaskCommentQueue.add(
       "save-create-task-comment",
       body.entity.id,
-      { attempts: 1000, backoff: { type: "exponential", delay: 5000 } },
+      CONTROLLED_RETRY_OPTIONS,
     );
   }
 
@@ -21,7 +22,7 @@ export async function receivedNotionCommentWebhook(body: {
     await updateTaskCommentQueue.add(
       "save-update-task-comment",
       body.entity.id,
-      { attempts: 1000, backoff: { type: "exponential", delay: 5000 } },
+      CONTROLLED_RETRY_OPTIONS,
     );
   }
 
@@ -29,7 +30,7 @@ export async function receivedNotionCommentWebhook(body: {
     await excludeTaskCommentQueue.add(
       "save-exclude-task-comment",
       body.entity.id,
-      { attempts: 1000, backoff: { type: "exponential", delay: 5000 } },
+      CONTROLLED_RETRY_OPTIONS,
     );
   }
 }

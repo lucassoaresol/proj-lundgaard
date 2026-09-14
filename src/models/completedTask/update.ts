@@ -1,9 +1,10 @@
 import databaseNotionPromise from "../../db/notion";
 import dayLib from "../../libs/dayjs";
 import notion from "../../libs/notion";
-import { createCompletedTaskQueue } from "../../worker/services/completedTask";
+import { createCompletedTaskQueue } from "../../queues";
 import { retrieveYear } from "../year/retrieve";
 import { mapRecordCompletedTask } from "./mapRecord";
+import { CONTROLLED_RETRY_OPTIONS } from "../../worker/retryPolicy";
 
 export async function updateCompletedTask(notion_id: string, data_source_id: number) {
   const database = await databaseNotionPromise
@@ -47,9 +48,10 @@ export async function updateCompletedTask(notion_id: string, data_source_id: num
       }
     }
   } else {
-    await createCompletedTaskQueue.add("save-create-completed-task", { notion_id, data_source_id }, {
-      attempts: 1000,
-      backoff: { type: "exponential", delay: 5000 },
-    });
+    await createCompletedTaskQueue.add(
+      "save-create-completed-task",
+      { notion_id, data_source_id },
+      CONTROLLED_RETRY_OPTIONS,
+    );
   }
 }

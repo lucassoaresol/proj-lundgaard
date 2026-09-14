@@ -1,17 +1,16 @@
-import { Queue, Worker } from "bullmq";
+import { Worker } from "bullmq";
+import type { CompletedTaskJob } from "../../queues";
 import { createCompletedTask } from "../../models/completedTask/create";
 import { excludeCompletedTask } from "../../models/completedTask/exclude";
 import { updateCompletedTask } from "../../models/completedTask/update";
+import { runWithRetryPolicy } from "../retryPolicy";
 
-export const createCompletedTaskQueue = new Queue<{ notion_id: string, data_source_id: number }>("create-completed-task", {
-  connection: {},
-  prefix: "notion-lundgaard",
-});
-
-export const createCompletedTaskWorker = new Worker<{ notion_id: string, data_source_id: number }>(
+export const createCompletedTaskWorker = new Worker<CompletedTaskJob>(
   "create-completed-task",
   async (job) => {
-    await createCompletedTask(job.data.notion_id, job.data.data_source_id)
+    await runWithRetryPolicy(() =>
+      createCompletedTask(job.data.notion_id, job.data.data_source_id),
+    );
   },
   {
     connection: {},
@@ -21,15 +20,12 @@ export const createCompletedTaskWorker = new Worker<{ notion_id: string, data_so
   },
 );
 
-export const updateCompletedTaskQueue = new Queue<{ notion_id: string, data_source_id: number }>("update-completed-task", {
-  connection: {},
-  prefix: "notion-lundgaard",
-});
-
-export const updateCompletedTaskWorker = new Worker<{ notion_id: string, data_source_id: number }>(
+export const updateCompletedTaskWorker = new Worker<CompletedTaskJob>(
   "update-completed-task",
   async (job) => {
-    await updateCompletedTask(job.data.notion_id, job.data.data_source_id)
+    await runWithRetryPolicy(() =>
+      updateCompletedTask(job.data.notion_id, job.data.data_source_id),
+    );
   },
   {
     connection: {},
@@ -38,16 +34,11 @@ export const updateCompletedTaskWorker = new Worker<{ notion_id: string, data_so
     prefix: "notion-lundgaard",
   },
 );
-
-export const excludeCompletedTaskQueue = new Queue<string>("exclude-completed-task", {
-  connection: {},
-  prefix: "notion-lundgaard",
-});
 
 export const excludeCompletedTaskWorker = new Worker<string>(
   "exclude-completed-task",
   async (job) => {
-    await excludeCompletedTask(job.data)
+    await runWithRetryPolicy(() => excludeCompletedTask(job.data));
   },
   {
     connection: {},

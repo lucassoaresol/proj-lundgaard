@@ -1,6 +1,7 @@
 import databaseNotionPromise from "../../db/notion";
 import dayLib from "../../libs/dayjs";
 import notion from "../../libs/notion";
+import { isUniqueViolation } from "../../utils/databaseError";
 import { retrieveCustomer } from "../customer/retrieve";
 import { mapRecordTask } from "./mapRecord";
 
@@ -16,11 +17,22 @@ export async function createTask(notion_id: string) {
 
     const customer = await retrieveCustomer(data.customer, data.customer_id);
 
-    const newTask = await database.insertIntoTable<{ id: number }>({
-      table: "tasks",
-      dataDict: { data, customer_id: customer?.id, notion_id },
-      select: { id: true },
-    });
+    let newTask: { id: number } | undefined;
+    try {
+      newTask = (await database.insertIntoTable<{ id: number }>({
+        table: "tasks",
+        dataDict: { data, customer_id: customer?.id, notion_id },
+        select: { id: true },
+      })) || undefined;
+    } catch (error) {
+      if (!isUniqueViolation(error)) throw error;
+      newTask = (await database.findFirst<{ id: number }>({
+        table: "tasks",
+        where: { notion_id },
+        select: { id: true },
+      })) || undefined;
+      if (!newTask) throw error;
+    }
 
     if (newTask) {
       let propertiesData = {}

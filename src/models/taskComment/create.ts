@@ -1,6 +1,7 @@
 import databaseNotionPromise from "../../db/notion";
 import dayLib from "../../libs/dayjs";
 import notion from "../../libs/notion";
+import { isUniqueViolation } from "../../utils/databaseError";
 
 export async function createTaskComment(notion_id: string) {
   const database = await databaseNotionPromise
@@ -21,10 +22,20 @@ export async function createTaskComment(notion_id: string) {
       const task = await database.findFirst<{ id: number }>({ table: "tasks", where: { notion_id: result.parent.page_id }, select: { id: true } })
 
       if (task) {
-        await database.insertIntoTable({
-          table: "task_comments",
-          dataDict: { ...dataDict, task_id: task.id }
-        });
+        try {
+          await database.insertIntoTable({
+            table: "task_comments",
+            dataDict: { ...dataDict, task_id: task.id }
+          });
+        } catch (error) {
+          if (!isUniqueViolation(error)) throw error;
+          const winner = await database.findFirst({
+            table: "task_comments",
+            where: { notion_id },
+            select: { id: true },
+          });
+          if (!winner) throw error;
+        }
       }
     }
   }

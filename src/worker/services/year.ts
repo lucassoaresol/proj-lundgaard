@@ -1,17 +1,13 @@
-import { Queue, Worker } from "bullmq";
+import { Worker } from "bullmq";
 import { createYear } from "../../models/year/create";
 import { excludeYear } from "../../models/year/exclude";
 import { updateYear } from "../../models/year/update";
-
-export const createYearQueue = new Queue<string>("create-year", {
-  connection: {},
-  prefix: "notion-lundgaard",
-});
+import { runWithRetryPolicy } from "../retryPolicy";
 
 export const createYearWorker = new Worker<string>(
   "create-year",
   async (job) => {
-    await createYear(job.data)
+    await runWithRetryPolicy(() => createYear(job.data));
   },
   {
     connection: {},
@@ -20,16 +16,11 @@ export const createYearWorker = new Worker<string>(
     prefix: "notion-lundgaard",
   },
 );
-
-export const updateYearQueue = new Queue<string>("update-year", {
-  connection: {},
-  prefix: "notion-lundgaard",
-});
 
 export const updateYearWorker = new Worker<string>(
   "update-year",
   async (job) => {
-    await updateYear(job.data)
+    await runWithRetryPolicy(() => updateYear(job.data));
   },
   {
     connection: {},
@@ -39,15 +30,10 @@ export const updateYearWorker = new Worker<string>(
   },
 );
 
-export const excludeYearQueue = new Queue<string>("exclude-year", {
-  connection: {},
-  prefix: "notion-lundgaard",
-});
-
 export const excludeYearWorker = new Worker<string>(
   "exclude-year",
   async (job) => {
-    await excludeYear(job.data)
+    await runWithRetryPolicy(() => excludeYear(job.data));
   },
   {
     connection: {},

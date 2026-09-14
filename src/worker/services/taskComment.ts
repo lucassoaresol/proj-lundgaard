@@ -1,18 +1,14 @@
-import { Queue, Worker } from "bullmq";
+import { Worker } from "bullmq";
 import { createTaskComment } from "../../models/taskComment/create";
 import { updateTaskComment } from "../../models/taskComment/update";
 import { excludeTaskComment } from "../../models/taskComment/exclude";
+import { runWithRetryPolicy } from "../retryPolicy";
 
-
-export const createTaskCommentQueue = new Queue<string>("create-task-comment", {
-  connection: {},
-  prefix: "notion-lundgaard",
-});
 
 export const createTaskCommentWorker = new Worker<string>(
   "create-task-comment",
   async (job) => {
-    await createTaskComment(job.data)
+    await runWithRetryPolicy(() => createTaskComment(job.data));
   },
   {
     connection: {},
@@ -21,16 +17,11 @@ export const createTaskCommentWorker = new Worker<string>(
     prefix: "notion-lundgaard",
   },
 );
-
-export const updateTaskCommentQueue = new Queue<string>("update-task-comment", {
-  connection: {},
-  prefix: "notion-lundgaard",
-});
 
 export const updateTaskCommentWorker = new Worker<string>(
   "update-task-comment",
   async (job) => {
-    await updateTaskComment(job.data)
+    await runWithRetryPolicy(() => updateTaskComment(job.data));
   },
   {
     connection: {},
@@ -40,15 +31,10 @@ export const updateTaskCommentWorker = new Worker<string>(
   },
 );
 
-export const excludeTaskCommentQueue = new Queue<string>("exclude-task-comment", {
-  connection: {},
-  prefix: "notion-lundgaard",
-});
-
 export const excludeTaskCommentWorker = new Worker<string>(
   "exclude-task-comment",
   async (job) => {
-    await excludeTaskComment(job.data)
+    await runWithRetryPolicy(() => excludeTaskComment(job.data));
   },
   {
     connection: {},

@@ -1,10 +1,16 @@
 import { CronJob } from "cron";
+import { createHash } from "node:crypto";
 
 import databaseNotionPromise from "../db/notion";
 import notion from "../libs/notion";
 import { mapRecordTask } from "../models/task/mapRecord";
 import { runShellScript } from "../utils/runShellScript";
-import { updateTaskCustomerQueue } from "../worker/services/task";
+import { updateTaskCustomerQueue } from "../queues";
+import { classifyJobError, CONTROLLED_RETRY_OPTIONS } from "../worker/retryPolicy";
+
+function taskRef(notionId: string): string {
+  return createHash("sha256").update(notionId).digest("hex").slice(0, 10);
+}
 
 CronJob.from({
   cronTime: "0 0 * * *",
@@ -33,23 +39,33 @@ CronJob.from({
     });
 
     for (const task of tasks) {
-      const result = (await notion.pages.retrieve({
-        page_id: task.notion_id,
-      })) as any;
-      const data = mapRecordTask(result.properties);
+      try {
+        const result = (await notion.pages.retrieve({
+          page_id: task.notion_id,
+        })) as any;
+        const data = mapRecordTask(result.properties);
 
-      await updateTaskCustomerQueue.add(
-        "save-update-task-customer",
-        {
-          notion_id: task.notion_id,
-          project: data.customer,
-          customer_id: data.customer_id,
-        },
-        {
-          attempts: 1000,
-          backoff: { type: "exponential", delay: 5000 },
-        },
-      );
+        await updateTaskCustomerQueue.add(
+          "save-update-task-customer",
+          {
+            notion_id: task.notion_id,
+            project: data.customer,
+            customer_id: data.customer_id,
+          },
+          CONTROLLED_RETRY_OPTIONS,
+        );
+      } catch (error) {
+        const classification = classifyJobError(error);
+        console.error("cron_task_customer_failed", {
+          queue: "update-task-customer",
+          job: "save-update-task-customer",
+          taskRef: taskRef(task.notion_id),
+          errorClass: classification.errorClass,
+          retryable: classification.retryable,
+        });
+
+        if (classification.retryable) throw error;
+      }
     }
   },
   start: true,

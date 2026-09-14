@@ -11,7 +11,7 @@
     "start": "node dist/api/index.js",
     "worker": "node dist/worker/index.js",
     "cron": "node dist/cron/index.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "tsx --test tests/**/*.test.ts"
   },
   "keywords": [],
   "author": "",

@@ -6,29 +6,29 @@ import {
   createCompletedTaskQueue,
   updateCompletedTaskQueue,
   excludeCompletedTaskQueue,
-} from "../worker/services/completedTask";
+} from "../queues";
 import {
   createCustomerQueue,
   updateCustomerQueue,
   excludeCustomerQueue,
-} from "../worker/services/customer";
+} from "../queues";
 import {
   createTaskQueue,
   updateTaskQueue,
   excludeTaskQueue,
   updateTaskAssigneeQueue,
   updateTaskCustomerQueue,
-} from "../worker/services/task";
+} from "../queues";
 import {
   createTaskCommentQueue,
   updateTaskCommentQueue,
   excludeTaskCommentQueue,
-} from "../worker/services/taskComment";
+} from "../queues";
 import {
   createYearQueue,
   updateYearQueue,
   excludeYearQueue,
-} from "../worker/services/year";
+} from "../queues";
 
 export const serverAdapter = new FastifyAdapter();
 

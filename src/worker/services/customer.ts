@@ -1,17 +1,13 @@
-import { Queue, Worker } from "bullmq";
+import { Worker } from "bullmq";
 import { createCustomer } from "../../models/customer/create";
 import { updateCustomer } from "../../models/customer/update";
 import { excludeCustomer } from "../../models/customer/exclude";
-
-export const createCustomerQueue = new Queue<string>("create-customer", {
-  connection: {},
-  prefix: "notion-lundgaard",
-});
+import { runWithRetryPolicy } from "../retryPolicy";
 
 export const createCustomerWorker = new Worker<string>(
   "create-customer",
   async (job) => {
-    await createCustomer(job.data)
+    await runWithRetryPolicy(() => createCustomer(job.data));
   },
   {
     connection: {},
@@ -20,16 +16,11 @@ export const createCustomerWorker = new Worker<string>(
     prefix: "notion-lundgaard",
   },
 );
-
-export const updateCustomerQueue = new Queue<string>("update-customer", {
-  connection: {},
-  prefix: "notion-lundgaard",
-});
 
 export const updateCustomerWorker = new Worker<string>(
   "update-customer",
   async (job) => {
-    await updateCustomer(job.data)
+    await runWithRetryPolicy(() => updateCustomer(job.data));
   },
   {
     connection: {},
@@ -39,15 +30,10 @@ export const updateCustomerWorker = new Worker<string>(
   },
 );
 
-export const excludeCustomerQueue = new Queue<string>("exclude-customer", {
-  connection: {},
-  prefix: "notion-lundgaard",
-});
-
 export const excludeCustomerWorker = new Worker<string>(
   "exclude-customer",
   async (job) => {
-    await excludeCustomer(job.data)
+    await runWithRetryPolicy(() => excludeCustomer(job.data));
   },
   {
     connection: {},

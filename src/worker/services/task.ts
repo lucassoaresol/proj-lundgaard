@@ -1,19 +1,16 @@
-import { Queue, Worker } from "bullmq";
+import { Worker } from "bullmq";
+import type { TaskAssigneeJob, TaskCustomerJob } from "../../queues";
 import { createTask } from "../../models/task/create";
 import { updateTask } from "../../models/task/update";
 import { excludeTask } from "../../models/task/exclude";
 import { updateTaskAssignee } from "../../models/task/updateAssignee";
 import { updateTaskCustomer } from "../../models/task/updateCustomer";
-
-export const createTaskQueue = new Queue<string>("create-task", {
-  connection: {},
-  prefix: "notion-lundgaard",
-});
+import { runWithRetryPolicy } from "../retryPolicy";
 
 export const createTaskWorker = new Worker<string>(
   "create-task",
   async (job) => {
-    await createTask(job.data)
+    await runWithRetryPolicy(() => createTask(job.data));
   },
   {
     connection: {},
@@ -22,16 +19,11 @@ export const createTaskWorker = new Worker<string>(
     prefix: "notion-lundgaard",
   },
 );
-
-export const updateTaskQueue = new Queue<string>("update-task", {
-  connection: {},
-  prefix: "notion-lundgaard",
-});
 
 export const updateTaskWorker = new Worker<string>(
   "update-task",
   async (job) => {
-    await updateTask(job.data)
+    await runWithRetryPolicy(() => updateTask(job.data));
   },
   {
     connection: {},
@@ -41,15 +33,12 @@ export const updateTaskWorker = new Worker<string>(
   },
 );
 
-export const updateTaskAssigneeQueue = new Queue<{ notion_id: string, assignee: string }>("update-task-assignee", {
-  connection: {},
-  prefix: "notion-lundgaard",
-});
-
-export const updateTaskAssigneeWorker = new Worker<{ notion_id: string, assignee: string }>(
+export const updateTaskAssigneeWorker = new Worker<TaskAssigneeJob>(
   "update-task-assignee",
   async (job) => {
-    await updateTaskAssignee(job.data.notion_id, job.data.assignee)
+    await runWithRetryPolicy(() =>
+      updateTaskAssignee(job.data.notion_id, job.data.assignee),
+    );
   },
   {
     connection: {},
@@ -59,15 +48,16 @@ export const updateTaskAssigneeWorker = new Worker<{ notion_id: string, assignee
   },
 );
 
-export const updateTaskCustomerQueue = new Queue<{ notion_id: string, project: string, customer_id: any }>("update-task-customer", {
-  connection: {},
-  prefix: "notion-lundgaard",
-});
-
-export const updateTaskCustomerWorker = new Worker<{ notion_id: string, project: string, customer_id: any }>(
+export const updateTaskCustomerWorker = new Worker<TaskCustomerJob>(
   "update-task-customer",
   async (job) => {
-    await updateTaskCustomer(job.data.notion_id, job.data.project, job.data.customer_id)
+    await runWithRetryPolicy(() =>
+      updateTaskCustomer(
+        job.data.notion_id,
+        job.data.project,
+        job.data.customer_id,
+      ),
+    );
   },
   {
     connection: {},
@@ -76,16 +66,11 @@ export const updateTaskCustomerWorker = new Worker<{ notion_id: string, project:
     prefix: "notion-lundgaard",
   },
 );
-
-export const excludeTaskQueue = new Queue<string>("exclude-task", {
-  connection: {},
-  prefix: "notion-lundgaard",
-});
 
 export const excludeTaskWorker = new Worker<string>(
   "exclude-task",
   async (job) => {
-    await excludeTask(job.data)
+    await runWithRetryPolicy(() => excludeTask(job.data));
   },
   {
     connection: {},

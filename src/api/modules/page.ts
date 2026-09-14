@@ -1,8 +1,6 @@
 import { getStorage } from "../../utils/getStorage";
-import { createCompletedTaskQueue, updateCompletedTaskQueue, excludeCompletedTaskQueue } from "../../worker/services/completedTask";
-import { createCustomerQueue, updateCustomerQueue, excludeCustomerQueue } from "../../worker/services/customer";
-import { createTaskQueue, updateTaskQueue, excludeTaskQueue } from "../../worker/services/task";
-import { createYearQueue, updateYearQueue, excludeYearQueue } from "../../worker/services/year";
+import { createCompletedTaskQueue, updateCompletedTaskQueue, excludeCompletedTaskQueue, createCustomerQueue, updateCustomerQueue, excludeCustomerQueue, createTaskQueue, updateTaskQueue, excludeTaskQueue, createYearQueue, updateYearQueue, excludeYearQueue } from "../../queues";
+import { CONTROLLED_RETRY_OPTIONS } from "../../worker/retryPolicy";
 
 export async function receivedNotionPageWebhook(body: {
   entity: { id: string };
@@ -27,7 +25,7 @@ export async function receivedNotionPageWebhook(body: {
         await createCustomerQueue.add(
           "save-create-customer",
           body.entity.id,
-          { attempts: 1000, backoff: { type: "exponential", delay: 5000 } },
+          CONTROLLED_RETRY_OPTIONS,
         );
       }
 
@@ -35,30 +33,33 @@ export async function receivedNotionPageWebhook(body: {
         body.data.parent.data_source_id ===
         dataSourceTask.data
       ) {
-        await createTaskQueue.add("save-create-task", body.entity.id, {
-          attempts: 1000,
-          backoff: { type: "exponential", delay: 5000 },
-        });
+        await createTaskQueue.add(
+          "save-create-task",
+          body.entity.id,
+          CONTROLLED_RETRY_OPTIONS,
+        );
       }
 
       if (
         body.data.parent.data_source_id ===
         dataSourceYear.data
       ) {
-        await createYearQueue.add("save-create-year", body.entity.id, {
-          attempts: 1000,
-          backoff: { type: "exponential", delay: 5000 },
-        });
+        await createYearQueue.add(
+          "save-create-year",
+          body.entity.id,
+          CONTROLLED_RETRY_OPTIONS,
+        );
       }
 
       if (
         body.data.parent.data_source_id ===
         dataSourceCompletedTask.data
       ) {
-        await createCompletedTaskQueue.add("save-create-completed-task", { notion_id: body.entity.id, data_source_id: dataSourceCompletedTask.id }, {
-          attempts: 1000,
-          backoff: { type: "exponential", delay: 5000 },
-        });
+        await createCompletedTaskQueue.add(
+          "save-create-completed-task",
+          { notion_id: body.entity.id, data_source_id: dataSourceCompletedTask.id },
+          CONTROLLED_RETRY_OPTIONS,
+        );
       }
     }
 
@@ -70,7 +71,7 @@ export async function receivedNotionPageWebhook(body: {
         await updateCustomerQueue.add(
           "save-update-customer",
           body.entity.id,
-          { attempts: 1000, backoff: { type: "exponential", delay: 5000 } },
+          CONTROLLED_RETRY_OPTIONS,
         );
       }
 
@@ -78,10 +79,11 @@ export async function receivedNotionPageWebhook(body: {
         body.data.parent.data_source_id ===
         dataSourceTask.data
       ) {
-        await updateTaskQueue.add("save-update-task", body.entity.id, {
-          attempts: 1000,
-          backoff: { type: "exponential", delay: 5000 },
-        });
+        await updateTaskQueue.add(
+          "save-update-task",
+          body.entity.id,
+          CONTROLLED_RETRY_OPTIONS,
+        );
       }
 
       if (
@@ -91,7 +93,7 @@ export async function receivedNotionPageWebhook(body: {
         await updateYearQueue.add(
           "save-update-year",
           body.entity.id,
-          { attempts: 1000, backoff: { type: "exponential", delay: 5000 } },
+          CONTROLLED_RETRY_OPTIONS,
         );
       }
 
@@ -102,7 +104,7 @@ export async function receivedNotionPageWebhook(body: {
         await updateCompletedTaskQueue.add(
           "save-update-completed-task",
           { notion_id: body.entity.id, data_source_id: dataSourceCompletedTask.id },
-          { attempts: 1000, backoff: { type: "exponential", delay: 5000 } },
+          CONTROLLED_RETRY_OPTIONS,
         );
       }
     }
@@ -115,7 +117,7 @@ export async function receivedNotionPageWebhook(body: {
         await excludeCustomerQueue.add(
           "save-exclude-customer",
           body.entity.id,
-          { attempts: 1000, backoff: { type: "exponential", delay: 5000 } },
+          CONTROLLED_RETRY_OPTIONS,
         );
       }
 
@@ -126,7 +128,7 @@ export async function receivedNotionPageWebhook(body: {
         await excludeTaskQueue.add(
           "save-exclude-task",
           body.entity.id,
-          { attempts: 1000, backoff: { type: "exponential", delay: 5000 } },
+          CONTROLLED_RETRY_OPTIONS,
         );
       }
 
@@ -137,7 +139,7 @@ export async function receivedNotionPageWebhook(body: {
         await excludeYearQueue.add(
           "save-exclude-year",
           body.entity.id,
-          { attempts: 1000, backoff: { type: "exponential", delay: 5000 } },
+          CONTROLLED_RETRY_OPTIONS,
         );
       }
 
@@ -148,7 +150,7 @@ export async function receivedNotionPageWebhook(body: {
         await excludeCompletedTaskQueue.add(
           "save-exclude-completed-task",
           body.entity.id,
-          { attempts: 1000, backoff: { type: "exponential", delay: 5000 } },
+          CONTROLLED_RETRY_OPTIONS,
         );
       }
     }

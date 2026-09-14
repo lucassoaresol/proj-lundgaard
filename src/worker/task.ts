@@ -1,77 +1,8 @@
-import {
-  createTaskWorker,
-  excludeTaskWorker,
-  updateTaskAssigneeWorker,
-  updateTaskCustomerWorker,
-  updateTaskWorker,
-} from "./services/task";
+import { observeWorker } from "./observeWorker";
+import { createTaskWorker, excludeTaskWorker, updateTaskAssigneeWorker, updateTaskCustomerWorker, updateTaskWorker } from "./services/task";
 
-createTaskWorker.on("completed", (job) => {
-  console.log(
-    `✅ [Sucesso] [CREATE TASK] Tarefa ID ${job.id} processada com sucesso.`,
-  );
-  console.log(`Detalhes do Job: ${JSON.stringify(job.data)}`);
-});
-
-createTaskWorker.on("failed", async (job, err) => {
-  console.error(
-    `❌ [Erro] [CREATE TASK] Falha ao processar a tarefa ID ${job?.id}. Motivo: ${err.message}`,
-  );
-  console.error(`Detalhes do Job: ${JSON.stringify(job?.data)}`);
-});
-
-excludeTaskWorker.on("completed", (job) => {
-  console.log(
-    `✅ [Sucesso] [EXCLUDE TASK] Tarefa ID ${job.id} processada com sucesso.`,
-  );
-  console.log(`Detalhes do Job: ${JSON.stringify(job.data)}`);
-});
-
-excludeTaskWorker.on("failed", async (job, err) => {
-  console.error(
-    `❌ [Erro] [EXCLUDE TASK] Falha ao processar a tarefa ID ${job?.id}. Motivo: ${err.message}`,
-  );
-  console.error(`Detalhes do Job: ${JSON.stringify(job?.data)}`);
-});
-
-updateTaskWorker.on("completed", (job) => {
-  console.log(
-    `✅ [Sucesso] [UPDATE TASK] Tarefa ID ${job.id} processada com sucesso.`,
-  );
-  console.log(`Detalhes do Job: ${JSON.stringify(job.data)}`);
-});
-
-updateTaskWorker.on("failed", async (job, err) => {
-  console.error(
-    `❌ [Erro] [UPDATE TASK] Falha ao processar a tarefa ID ${job?.id}. Motivo: ${err.message}`,
-  );
-  console.error(`Detalhes do Job: ${JSON.stringify(job?.data)}`);
-});
-
-updateTaskAssigneeWorker.on("completed", (job) => {
-  console.log(
-    `✅ [Sucesso] [UPDATE TASK ASSIGNEE] Tarefa ID ${job.id} processada com sucesso.`,
-  );
-  console.log(`Detalhes do Job: ${JSON.stringify(job.data)}`);
-});
-
-updateTaskAssigneeWorker.on("failed", async (job, err) => {
-  console.error(
-    `❌ [Erro] [UPDATE TASK ASSIGNEE] Falha ao processar a tarefa ID ${job?.id}. Motivo: ${err.message}`,
-  );
-  console.error(`Detalhes do Job: ${JSON.stringify(job?.data)}`);
-});
-
-updateTaskCustomerWorker.on("completed", (job) => {
-  console.log(
-    `✅ [Sucesso] [UPDATE TASK CUSTOMER] Tarefa ID ${job.id} processada com sucesso.`,
-  );
-  console.log(`Detalhes do Job: ${JSON.stringify(job.data)}`);
-});
-
-updateTaskCustomerWorker.on("failed", async (job, err) => {
-  console.error(
-    `❌ [Erro] [UPDATE TASK CUSTOMER] Falha ao processar a tarefa ID ${job?.id}. Motivo: ${err.message}`,
-  );
-  console.error(`Detalhes do Job: ${JSON.stringify(job?.data)}`);
-});
+observeWorker(createTaskWorker, "create-task");
+observeWorker(updateTaskWorker, "update-task");
+observeWorker(updateTaskAssigneeWorker, "update-task-assignee");
+observeWorker(updateTaskCustomerWorker, "update-task-customer");
+observeWorker(excludeTaskWorker, "exclude-task");
