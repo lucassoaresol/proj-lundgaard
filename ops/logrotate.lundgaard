@@ -1,0 +1,15 @@
+/var/log/lundgaard/api-out.log
+/var/log/lundgaard/api-error.log
+/var/log/lundgaard/worker-out.log
+/var/log/lundgaard/worker-error.log
+/var/log/lundgaard/cron-out.log
+/var/log/lundgaard/cron-error.log {
+    size 20M
+    rotate 14
+    compress
+    delaycompress
+    missingok
+    notifempty
+    copytruncate
+    create 0640 root root
+}
