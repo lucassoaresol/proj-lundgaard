@@ -1,19 +1,41 @@
 import { MONTHS_NAME } from "../../config/const";
-import type { NotionCheckboxProp, NotionDateProp, NotionPeopleProp, NotionRichTextProp, NotionRollupProp, NotionSelectProp, NotionStatusProp, NotionTitleProp } from "../../config/types";
+import type {
+  NotionCheckboxProp,
+  NotionDateProp,
+  NotionPeopleProp,
+  NotionRichTextProp,
+  NotionRollupProp,
+  NotionSelectProp,
+  NotionStatusProp,
+  NotionTitleProp,
+} from "../../config/types";
 import databaseNotionDevPromise from "../../db/dev/notionDev";
 import dayLib from "../../libs/dayjs";
 import notion from "../../libs/notion";
 import { createTaskDevQueue } from "../../queues";
+import { databaseErrorMetadata } from "../../utils/databaseError";
 import { getStorageDev } from "../../utils/dev/getStorageDev";
 import { joinPlainText } from "../../utils/joinPlainText";
 import { CONTROLLED_RETRY_OPTIONS } from "../../worker/retryPolicy";
+
+import {
+  runCreateTaskDev,
+  TASKS_NOTION_ID_CONSTRAINT,
+} from "./createTaskIdempotency";
 import { retrieveCustomerDev } from "./customer";
 
 type Properties = {
-  Nome?: NotionTitleProp; Project?: NotionSelectProp; DEVIS?: NotionRichTextProp;
-  Status?: NotionStatusProp; Notes?: NotionRichTextProp; "Concluído em"?: NotionDateProp;
-  Assignee?: NotionSelectProp; Pessoa?: NotionPeopleProp; Team?: NotionSelectProp;
-  "Cliente ID"?: NotionRollupProp; Editable?: NotionCheckboxProp;
+  Nome?: NotionTitleProp;
+  Project?: NotionSelectProp;
+  DEVIS?: NotionRichTextProp;
+  Status?: NotionStatusProp;
+  Notes?: NotionRichTextProp;
+  "Concluído em"?: NotionDateProp;
+  Assignee?: NotionSelectProp;
+  Pessoa?: NotionPeopleProp;
+  Team?: NotionSelectProp;
+  "Cliente ID"?: NotionRollupProp;
+  Editable?: NotionCheckboxProp;
 };
 
 export function mapRecordTaskDev(properties: Properties) {
@@ -35,18 +57,57 @@ export function mapRecordTaskDev(properties: Properties) {
 
 export async function createTaskDev(notionId: string) {
   const database = await databaseNotionDevPromise;
-  if (await database.findFirst({ table: "tasks", where: { notion_id: notionId }, select: { id: true } })) return;
-  const page = (await notion.pages.retrieve({ page_id: notionId })) as any;
-  const data = mapRecordTaskDev(page.properties);
-  const customer = await retrieveCustomerDev(data.customer, data.customer_id);
-  const inserted = await database.insertIntoTable<{ id: number }>({ table: "tasks", dataDict: { data, customer_id: customer?.id, notion_id: notionId }, select: { id: true } });
-  if (!inserted) return;
-  const properties: Record<string, unknown> = { Editable: { checkbox: true } };
-  if (customer) properties.Cliente = { relation: [{ id: customer.notion_id }] };
-  if (!data.customer && customer) properties.Project = { select: { name: customer.name } };
-  if (data.assignee.length < 2 && data.people) properties.Assignee = { select: { name: data.people } };
-  const updated = (await notion.pages.update({ page_id: notionId, properties: { ID: { number: inserted.id }, ...properties } })) as any;
-  await database.updateIntoTable({ table: "tasks", dataDict: { data: mapRecordTaskDev(updated.properties), customer_id: customer?.id, updated_at: dayLib(updated.last_edited_time).toDate() }, where: { id: inserted.id } });
+  await runCreateTaskDev({
+    findExisting: () =>
+      database.findFirst({
+        table: "tasks",
+        where: { notion_id: notionId },
+        select: { id: true },
+      }),
+    retrievePage: async () =>
+      (await notion.pages.retrieve({ page_id: notionId })) as any,
+    mapPage: (page) => mapRecordTaskDev(page.properties),
+    resolveCustomer: (data) =>
+      retrieveCustomerDev(data.customer, data.customer_id),
+    insert: (data, customerId) => async () => {
+      try {
+        return await database.insertIntoTable<{ id: number }>({
+          table: "tasks",
+          dataDict: { data, customer_id: customerId, notion_id: notionId },
+          select: { id: true },
+        });
+      } catch (error) {
+        console.error(
+          "create_task_dev_insert_failed",
+          databaseErrorMetadata(error),
+        );
+        throw error;
+      }
+    },
+    findWinner: () =>
+      database.findFirst<{ id: number }>({
+        table: "tasks",
+        where: { notion_id: notionId },
+        select: { id: true },
+      }),
+    updatePage: async (properties) =>
+      (await notion.pages.update({ page_id: notionId, properties })) as any,
+    saveRow: (id, page, customerId) =>
+      database.updateIntoTable({
+        table: "tasks",
+        dataDict: {
+          data: mapRecordTaskDev(page.properties),
+          customer_id: customerId,
+          updated_at: dayLib(page.last_edited_time).toDate(),
+        },
+        where: { id },
+      }),
+    duplicate: () =>
+      console.info("create_task_dev_duplicate", {
+        code: "23505",
+        constraint: TASKS_NOTION_ID_CONSTRAINT,
+      }),
+  });
 }
 
 export async function updateTaskDev(notionId: string) {
