@@ -1,11 +1,15 @@
 import { createHash } from "node:crypto";
 
 import {
+  compareAndSetCustomerReconciliationMarker,
+  compareAndSetTaskData,
+  CUSTOMER_QUEUE_BATCH_LIMIT,
   customerJobData,
   CustomerReconciliationTask,
   hasUsableCustomerReference,
   isNotionInaccessibleErrorClass,
   selectCustomerReconciliationBatch,
+  TaskDataCompareAndSet,
   withCustomerReconciliationMarker,
 } from "../models/task/customerReconciliation";
 import type { JobErrorClassification } from "../worker/retryPolicy";
@@ -15,7 +19,7 @@ type Dependencies = {
   enqueue: (data: ReturnType<typeof customerJobData>) => Promise<unknown>;
   retrievePage: (notionId: string) => Promise<unknown>;
   mapPage: (page: unknown) => unknown;
-  saveTaskData: (taskId: number, data: unknown) => Promise<unknown>;
+  saveTaskData: (update: TaskDataCompareAndSet) => Promise<unknown>;
   classifyError: (error: unknown) => JobErrorClassification;
   logError?: (event: string, context: Record<string, unknown>) => void;
 };
@@ -32,10 +36,12 @@ export async function reconcileTaskCustomers(
   const selection = selectCustomerReconciliationBatch(tasks, now);
   const logError = dependencies.logError ?? console.error;
   let enqueued = 0;
+  let enqueueAttempts = 0;
   let quarantined = 0;
 
   for (const task of selection.direct) {
     try {
+      enqueueAttempts += 1;
       await dependencies.enqueue(customerJobData(task));
       enqueued += 1;
     } catch (error) {
@@ -57,23 +63,35 @@ export async function reconcileTaskCustomers(
 
       if (!hasUsableCustomerReference(data)) {
         await dependencies.saveTaskData(
-          task.id,
-          withCustomerReconciliationMarker(data, "no_customer_reference", now),
+          compareAndSetTaskData(
+            task.id,
+            task.data,
+            withCustomerReconciliationMarker(
+              data,
+              "no_customer_reference",
+              now,
+            ),
+          ),
         );
         quarantined += 1;
         continue;
       }
 
-      await dependencies.saveTaskData(task.id, data);
-      await dependencies.enqueue(customerJobData({ ...task, data }));
-      enqueued += 1;
+      await dependencies.saveTaskData(
+        compareAndSetTaskData(task.id, task.data, data),
+      );
+      if (enqueueAttempts < CUSTOMER_QUEUE_BATCH_LIMIT) {
+        enqueueAttempts += 1;
+        await dependencies.enqueue(customerJobData({ ...task, data }));
+        enqueued += 1;
+      }
     } catch (error) {
       const classification = dependencies.classifyError(error);
 
       if (isNotionInaccessibleErrorClass(classification.errorClass)) {
         await dependencies.saveTaskData(
-          task.id,
-          withCustomerReconciliationMarker(
+          compareAndSetCustomerReconciliationMarker(
+            task.id,
             task.data,
             "notion_inaccessible",
             now,
@@ -82,8 +100,8 @@ export async function reconcileTaskCustomers(
         quarantined += 1;
       } else if (classification.retryable) {
         await dependencies.saveTaskData(
-          task.id,
-          withCustomerReconciliationMarker(
+          compareAndSetCustomerReconciliationMarker(
+            task.id,
             task.data,
             "transient_failure",
             now,
@@ -92,8 +110,12 @@ export async function reconcileTaskCustomers(
         );
       } else {
         await dependencies.saveTaskData(
-          task.id,
-          withCustomerReconciliationMarker(task.data, "permanent_failure", now),
+          compareAndSetCustomerReconciliationMarker(
+            task.id,
+            task.data,
+            "permanent_failure",
+            now,
+          ),
         );
         quarantined += 1;
       }

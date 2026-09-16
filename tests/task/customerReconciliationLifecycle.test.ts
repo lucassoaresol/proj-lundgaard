@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
+  compareAndSetCustomerReconciliationMarker,
   CUSTOMER_RECONCILIATION_KEY,
   mergeCustomerReconciliationState,
   shouldQueueCustomerReconciliation,
@@ -50,6 +51,25 @@ test("a changed customer reference clears cooldown and reconciles immediately", 
   assert.equal(merged[CUSTOMER_RECONCILIATION_KEY], undefined);
   assert.equal(
     shouldQueueCustomerReconciliation(previous, mappedWebhook, now),
+    true,
+  );
+});
+
+test("marker compare-and-set rejects a stale task data snapshot", () => {
+  const oldData = { status: "open" };
+  const currentData = { status: "open", customer: "ACME", customer_id: 7 };
+  const update = compareAndSetCustomerReconciliationMarker(
+    12,
+    oldData,
+    "transient_failure",
+    now,
+    1,
+  );
+
+  assert.deepEqual(update.where, { id: 12, data: oldData });
+  assert.notDeepEqual(currentData, update.where.data);
+  assert.equal(
+    shouldQueueCustomerReconciliation(oldData, currentData, now),
     true,
   );
 });

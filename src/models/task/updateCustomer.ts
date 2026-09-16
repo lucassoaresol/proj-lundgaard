@@ -7,8 +7,9 @@ import { classifyJobError } from "../../worker/retryPolicy";
 import { retrieveCustomer } from "../customer/retrieve";
 
 import {
+  compareAndSetCustomerReconciliationMarker,
+  compareAndSetTaskData,
   isNotionInaccessibleErrorClass,
-  withCustomerReconciliationMarker,
 } from "./customerReconciliation";
 import { mapRecordTask } from "./mapRecord";
 
@@ -40,16 +41,15 @@ export async function updateTaskCustomer(
   }
 
   if (!customer) {
+    const update = compareAndSetCustomerReconciliationMarker(
+      task.id,
+      task.data,
+      "unresolved_reference",
+      new Date(),
+    );
     await database.updateIntoTable({
       table: "tasks",
-      dataDict: {
-        data: withCustomerReconciliationMarker(
-          task.data,
-          "unresolved_reference",
-          new Date(),
-        ),
-      },
-      where: { id: task.id },
+      ...update,
     });
     console.warn("customer_reference_unresolved", {
       errorClass: "STALE_CUSTOMER_REFERENCE",
@@ -74,16 +74,15 @@ export async function updateTaskCustomer(
   } catch (error) {
     const classification = classifyJobError(error);
     if (isNotionInaccessibleErrorClass(classification.errorClass)) {
+      const update = compareAndSetCustomerReconciliationMarker(
+        task.id,
+        task.data,
+        "notion_inaccessible",
+        new Date(),
+      );
       await database.updateIntoTable({
         table: "tasks",
-        dataDict: {
-          data: withCustomerReconciliationMarker(
-            task.data,
-            "notion_inaccessible",
-            new Date(),
-          ),
-        },
-        where: { id: task.id },
+        ...update,
       });
       console.warn("task_customer_notion_inaccessible", {
         errorClass: classification.errorClass,
@@ -94,33 +93,31 @@ export async function updateTaskCustomer(
           .slice(0, 10),
       });
     } else {
+      const update = compareAndSetCustomerReconciliationMarker(
+        task.id,
+        task.data,
+        classification.retryable ? "transient_failure" : "permanent_failure",
+        new Date(),
+        classification.retryable ? 1 : undefined,
+      );
       await database.updateIntoTable({
         table: "tasks",
-        dataDict: {
-          data: withCustomerReconciliationMarker(
-            task.data,
-            classification.retryable
-              ? "transient_failure"
-              : "permanent_failure",
-            new Date(),
-            classification.retryable ? 1 : undefined,
-          ),
-        },
-        where: { id: task.id },
+        ...update,
       });
     }
     throw error;
   }
   const updated_at = dayLib(updateTask.last_edited_time);
   const data = mapRecordTask(updateTask.properties);
+  const dataUpdate = compareAndSetTaskData(task.id, task.data, data);
 
   await database.updateIntoTable({
     table: "tasks",
     dataDict: {
-      data,
+      ...dataUpdate.dataDict,
       customer_id: customer.id,
       updated_at: updated_at.toDate(),
     },
-    where: { id: task.id },
+    where: dataUpdate.where,
   });
 }

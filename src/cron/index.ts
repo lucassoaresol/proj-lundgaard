@@ -32,11 +32,11 @@ CronJob.from({
         ),
       retrievePage: (notionId) => notion.pages.retrieve({ page_id: notionId }),
       mapPage: (page) => mapRecordTask((page as any).properties),
-      saveTaskData: (taskId, data) =>
+      saveTaskData: ({ dataDict, where }) =>
         database.updateIntoTable({
           table: "tasks",
-          dataDict: { data },
-          where: { id: taskId },
+          dataDict,
+          where,
         }),
       classifyError: classifyJobError,
     });

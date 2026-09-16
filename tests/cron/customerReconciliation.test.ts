@@ -88,7 +88,7 @@ test("reconciliation executes no more than the queue and Notion call limits", as
         notionCalls += 1;
         return { properties: {} };
       },
-      mapPage: () => ({ customer: "", customer_id: undefined }),
+      mapPage: () => ({ customer: "PROBE CUSTOMER", customer_id: 999 }),
       saveTaskData: async () => undefined,
       classifyError: () => ({ errorClass: "UNKNOWN", retryable: true }),
     },
@@ -116,8 +116,8 @@ test("Notion object_not_found quarantines the local row without deleting it", as
         });
       },
       mapPage: () => ({}),
-      saveTaskData: async (id, data) => {
-        saved.push({ id, data });
+      saveTaskData: async ({ dataDict, where }) => {
+        saved.push({ id: where.id, data: dataDict.data });
       },
       classifyError: () => ({
         errorClass: "NOTION_OBJECT_NOT_FOUND",
@@ -157,8 +157,8 @@ test("a confirmed page without a customer is cooled down as a legitimate no-cust
       },
       retrievePage: async () => ({ properties: {} }),
       mapPage: () => ({ customer: "", customer_id: undefined }),
-      saveTaskData: async (_id, data) => {
-        saved.push(data);
+      saveTaskData: async ({ dataDict }) => {
+        saved.push(dataDict.data);
       },
       classifyError: () => ({ errorClass: "UNKNOWN", retryable: true }),
     },
@@ -191,8 +191,8 @@ test("a transient Notion failure gets a short cooldown without quarantine", asyn
         throw Object.assign(new Error("timeout"), { code: "ETIMEDOUT" });
       },
       mapPage: () => ({}),
-      saveTaskData: async (_id, data) => {
-        saved.push(data);
+      saveTaskData: async ({ dataDict }) => {
+        saved.push(dataDict.data);
       },
       classifyError: () => ({
         errorClass: "NETWORK_TRANSIENT",
@@ -229,6 +229,45 @@ test("never-probed tasks are selected before expired markers", () => {
   );
 
   assert.equal(selection.probes[0].id, neverProbed.id);
+});
+
+test("a failed probe cannot overwrite a concurrently updated customer reference", async () => {
+  const oldData = { status: "open" };
+  const newData = { status: "open", customer: "ACME", customer_id: 7 };
+  let currentData: unknown = oldData;
+
+  await reconcileTaskCustomers(
+    {
+      listTasks: async () => [task(77, oldData)],
+      enqueue: async () => undefined,
+      retrievePage: async () => {
+        currentData = newData;
+        throw Object.assign(new Error("timeout"), { code: "ETIMEDOUT" });
+      },
+      mapPage: () => ({}),
+      saveTaskData: async ({ dataDict, where }) => {
+        if (JSON.stringify(currentData) === JSON.stringify(where.data)) {
+          currentData = dataDict.data;
+        }
+      },
+      classifyError: () => ({
+        errorClass: "NETWORK_TRANSIENT",
+        retryable: true,
+      }),
+      logError: () => undefined,
+    },
+    now,
+  );
+
+  assert.deepEqual(currentData, newData);
+  const selection = selectCustomerReconciliationBatch(
+    [task(77, currentData)],
+    now,
+  );
+  assert.deepEqual(
+    selection.direct.map(({ id }) => id),
+    [77],
+  );
 });
 
 test("the cron source contains no obsolete filesystem cleanup", async () => {

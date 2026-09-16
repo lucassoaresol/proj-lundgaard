@@ -31,6 +31,11 @@ export type CustomerReconciliationSelection = {
   probes: CustomerReconciliationTask[];
 };
 
+export type TaskDataCompareAndSet = {
+  dataDict: { data: unknown };
+  where: { id: number; data: unknown };
+};
+
 function asTaskData(data: unknown): CustomerReferenceData {
   return data !== null && typeof data === "object"
     ? (data as CustomerReferenceData)
@@ -168,4 +173,29 @@ export function withCustomerReconciliationMarker(
       next_retry_at: nextRetry.toISOString(),
     },
   };
+}
+
+export function compareAndSetTaskData(
+  taskId: number,
+  expectedData: unknown,
+  nextData: unknown,
+): TaskDataCompareAndSet {
+  return {
+    dataDict: { data: nextData },
+    where: { id: taskId, data: expectedData },
+  };
+}
+
+export function compareAndSetCustomerReconciliationMarker(
+  taskId: number,
+  expectedData: unknown,
+  status: CustomerReconciliationMarker["status"],
+  now: Date,
+  cooldownDays = CUSTOMER_RECONCILIATION_COOLDOWN_DAYS,
+): TaskDataCompareAndSet {
+  return compareAndSetTaskData(
+    taskId,
+    expectedData,
+    withCustomerReconciliationMarker(expectedData, status, now, cooldownDays),
+  );
 }
