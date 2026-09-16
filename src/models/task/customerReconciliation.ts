@@ -33,7 +33,10 @@ export type CustomerReconciliationSelection = {
 
 export type TaskDataCompareAndSet = {
   dataDict: { data: unknown };
-  where: { id: number; data: unknown };
+  where: {
+    id: number;
+    data: { value: unknown } | null;
+  };
 };
 
 function asTaskData(data: unknown): CustomerReferenceData {
@@ -77,6 +80,17 @@ export function customerReferenceChanged(
     previous.customer !== next.customer ||
     previous.customerId !== next.customerId
   );
+}
+
+export function customerReferenceMatches(
+  data: unknown,
+  project: unknown,
+  customerId: unknown,
+): boolean {
+  return !customerReferenceChanged(data, {
+    customer: project,
+    customer_id: customerId,
+  });
 }
 
 export function mergeCustomerReconciliationState(
@@ -182,7 +196,13 @@ export function compareAndSetTaskData(
 ): TaskDataCompareAndSet {
   return {
     dataDict: { data: nextData },
-    where: { id: taskId, data: expectedData },
+    where: {
+      id: taskId,
+      data:
+        expectedData === undefined || expectedData === null
+          ? null
+          : { value: expectedData },
+    },
   };
 }
 

@@ -246,7 +246,9 @@ test("a failed probe cannot overwrite a concurrently updated customer reference"
       },
       mapPage: () => ({}),
       saveTaskData: async ({ dataDict, where }) => {
-        if (JSON.stringify(currentData) === JSON.stringify(where.data)) {
+        const expectedData =
+          where.data && "value" in where.data ? where.data.value : undefined;
+        if (JSON.stringify(currentData) === JSON.stringify(expectedData)) {
           currentData = dataDict.data;
         }
       },

@@ -6,6 +6,7 @@ import notion from "../../libs/notion";
 import { classifyJobError } from "../../worker/retryPolicy";
 import { retrieveCustomer } from "../customer/retrieve";
 
+import { resolveCurrentCustomerJob } from "./customerJobGuard";
 import {
   compareAndSetCustomerReconciliationMarker,
   compareAndSetTaskData,
@@ -18,27 +19,43 @@ export async function updateTaskCustomer(
   project: string,
   customer_id: unknown,
 ) {
-  let customer = await retrieveCustomer(
-    project,
-    customer_id as number | undefined,
-  );
   const database = await databaseNotionPromise;
-
-  const task = await database.findFirst<{
-    id: number;
-    customer_id: number | null;
-    data: unknown;
-  }>({
-    table: "tasks",
-    where: { notion_id },
-    select: { id: true, customer_id: true, data: true },
+  const taskRef = createHash("sha256")
+    .update(notion_id)
+    .digest("hex")
+    .slice(0, 10);
+  const current = await resolveCurrentCustomerJob({
+    project,
+    customerId: customer_id,
+    loadTask: () =>
+      database.findFirst({
+        table: "tasks",
+        where: { notion_id },
+        select: { id: true, customer_id: true, data: true },
+      }),
+    resolveCustomer: async () => {
+      let customer = await retrieveCustomer(
+        project,
+        customer_id as number | undefined,
+      );
+      if (
+        customer &&
+        project &&
+        project.trim().toUpperCase() !== customer.name
+      ) {
+        customer = await retrieveCustomer(project);
+      }
+      return customer;
+    },
+    onStale: () =>
+      console.info("customer_reconciliation_job_stale", {
+        taskRef,
+        retryable: false,
+      }),
   });
 
-  if (!task) return;
-
-  if (customer && project && project.trim().toUpperCase() !== customer.name) {
-    customer = await retrieveCustomer(project);
-  }
+  if (!current) return;
+  const { task, customer } = current;
 
   if (!customer) {
     const update = compareAndSetCustomerReconciliationMarker(
@@ -54,10 +71,7 @@ export async function updateTaskCustomer(
     console.warn("customer_reference_unresolved", {
       errorClass: "STALE_CUSTOMER_REFERENCE",
       retryable: false,
-      taskRef: createHash("sha256")
-        .update(notion_id)
-        .digest("hex")
-        .slice(0, 10),
+      taskRef,
     });
     return;
   }
@@ -87,10 +101,7 @@ export async function updateTaskCustomer(
       console.warn("task_customer_notion_inaccessible", {
         errorClass: classification.errorClass,
         retryable: classification.retryable,
-        taskRef: createHash("sha256")
-          .update(notion_id)
-          .digest("hex")
-          .slice(0, 10),
+        taskRef,
       });
     } else {
       const update = compareAndSetCustomerReconciliationMarker(

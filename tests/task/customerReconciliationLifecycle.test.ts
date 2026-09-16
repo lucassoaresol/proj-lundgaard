@@ -66,10 +66,28 @@ test("marker compare-and-set rejects a stale task data snapshot", () => {
     1,
   );
 
-  assert.deepEqual(update.where, { id: 12, data: oldData });
-  assert.notDeepEqual(currentData, update.where.data);
+  assert.deepEqual(update.where, { id: 12, data: { value: oldData } });
+  assert.notDeepEqual(currentData, update.where.data?.value);
   assert.equal(
     shouldQueueCustomerReconciliation(oldData, currentData, now),
     true,
   );
+});
+
+test("a null database snapshot uses IS NULL semantics", () => {
+  const fromNull = compareAndSetCustomerReconciliationMarker(
+    12,
+    null,
+    "transient_failure",
+    now,
+  );
+  const fromUndefined = compareAndSetCustomerReconciliationMarker(
+    12,
+    undefined,
+    "transient_failure",
+    now,
+  );
+
+  assert.equal(fromNull.where.data, null);
+  assert.equal(fromUndefined.where.data, null);
 });
