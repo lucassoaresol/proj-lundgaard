@@ -5,7 +5,10 @@ export type NotionText = { type: string; text?: { content: string } } & Record<
 export type NotionTitleProp = { title?: NotionText[] };
 export type NotionRichTextProp = { rich_text?: NotionText[] };
 export type NotionRelationProp = { relation?: { id: string }[] };
-export type NotionSelectProp = { select?: { name: string } };
+export type NotionSelectProp = {
+  select?: { name: string };
+  multi_select?: { name: string }[];
+};
 export type NotionStatusProp = { status?: { name: string } };
 export type NotionDateProp = { date?: { start: string } };
 export type NotionCheckboxProp = { checkbox?: boolean };

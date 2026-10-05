@@ -8,6 +8,7 @@ export type TaskCustomerJob = {
   notion_id: string;
   project: string;
   customer_id: unknown;
+  customer_notion_id?: string;
 };
 
 export const createCustomerQueue = new Queue<string>("create-customer", options);

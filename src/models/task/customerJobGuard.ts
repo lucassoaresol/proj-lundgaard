@@ -9,6 +9,7 @@ export type CustomerJobTask = {
 type Dependencies<Customer> = {
   project: string;
   customerId: unknown;
+  customerNotionId?: unknown;
   loadTask: () => Promise<CustomerJobTask | null>;
   resolveCustomer: () => Promise<Customer | undefined>;
   onStale: () => void;
@@ -27,6 +28,7 @@ export async function resolveCurrentCustomerJob<Customer>(
       initialTask.data,
       dependencies.project,
       dependencies.customerId,
+      dependencies.customerNotionId,
     )
   ) {
     dependencies.onStale();
@@ -42,6 +44,7 @@ export async function resolveCurrentCustomerJob<Customer>(
       currentTask.data,
       dependencies.project,
       dependencies.customerId,
+      dependencies.customerNotionId,
     )
   ) {
     dependencies.onStale();

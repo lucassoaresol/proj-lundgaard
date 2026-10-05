@@ -35,13 +35,18 @@ type Properties = {
   Pessoa?: NotionPeopleProp;
   Team?: NotionSelectProp;
   "Cliente ID"?: NotionRollupProp;
+  Cliente?: { relation?: { id: string }[] };
   Editable?: NotionCheckboxProp;
 };
 
 export function mapRecordTaskDev(properties: Properties) {
   return {
     name: (joinPlainText(properties.Nome?.title) ?? "").toUpperCase(),
-    customer: properties.Project?.select?.name ?? "",
+    customer:
+      properties.Project?.select?.name ??
+      (properties.Project?.multi_select?.length === 1
+        ? properties.Project.multi_select[0].name
+        : ""),
     devis: joinPlainText(properties.DEVIS?.rich_text) ?? "",
     status: properties.Status?.status?.name ?? "",
     notes: joinPlainText(properties.Notes?.rich_text) ?? "",
@@ -51,6 +56,7 @@ export function mapRecordTaskDev(properties: Properties) {
     people_id: properties.Pessoa?.people?.[0]?.id ?? "",
     team: properties.Team?.select?.name ?? "",
     customer_id: properties["Cliente ID"]?.rollup?.array?.[0]?.number,
+    customer_notion_id: properties.Cliente?.relation?.[0]?.id,
     is_editable: properties.Editable?.checkbox ?? false,
   };
 }
@@ -68,7 +74,11 @@ export async function createTaskDev(notionId: string) {
       (await notion.pages.retrieve({ page_id: notionId })) as any,
     mapPage: (page) => mapRecordTaskDev(page.properties),
     resolveCustomer: (data) =>
-      retrieveCustomerDev(data.customer, data.customer_id),
+      retrieveCustomerDev(
+        data.customer,
+        data.customer_id,
+        data.customer_notion_id,
+      ),
     insert: (data, customerId) => async () => {
       try {
         return await database.insertIntoTable<{ id: number }>({
@@ -112,46 +122,135 @@ export async function createTaskDev(notionId: string) {
 
 export async function updateTaskDev(notionId: string) {
   const database = await databaseNotionDevPromise;
-  const row = await database.findFirst<{ id: number; data: any; updated_at: Date }>({ table: "tasks", where: { notion_id: notionId }, select: { id: true, data: true, updated_at: true } });
-  if (!row) { await createTaskDevQueue.add("save-create-task-dev", notionId, CONTROLLED_RETRY_OPTIONS); return; }
+  const row = await database.findFirst<{
+    id: number;
+    data: any;
+    updated_at: Date;
+  }>({
+    table: "tasks",
+    where: { notion_id: notionId },
+    select: { id: true, data: true, updated_at: true },
+  });
+  if (!row) {
+    await createTaskDevQueue.add(
+      "save-create-task-dev",
+      notionId,
+      CONTROLLED_RETRY_OPTIONS,
+    );
+    return;
+  }
   const page = (await notion.pages.retrieve({ page_id: notionId })) as any;
-  let updatedAt = dayLib(page.last_edited_time); if (updatedAt.diff(row.updated_at) <= 0) return;
+  let updatedAt = dayLib(page.last_edited_time);
+  if (updatedAt.diff(row.updated_at) <= 0) return;
   let data = mapRecordTaskDev(page.properties);
-  let customer = await retrieveCustomerDev(data.customer, data.customer_id);
-  if (customer && data.customer.trim().toUpperCase() !== customer.name) customer = await retrieveCustomerDev(data.customer);
+  let customer = await retrieveCustomerDev(
+    data.customer,
+    data.customer_id,
+    data.customer_notion_id,
+  );
+  if (
+    customer &&
+    !data.customer_notion_id &&
+    data.customer.trim().toUpperCase() !== customer.name
+  )
+    customer = await retrieveCustomerDev(data.customer);
   if (customer && customer.id !== data.customer_id) {
-    const updated = (await notion.pages.update({ page_id: notionId, properties: { Cliente: { relation: [{ id: customer.notion_id }] } } })) as any;
-    updatedAt = dayLib(updated.last_edited_time); data = mapRecordTaskDev(updated.properties);
+    const updated = (await notion.pages.update({
+      page_id: notionId,
+      properties: { Cliente: { relation: [{ id: customer.notion_id }] } },
+    })) as any;
+    updatedAt = dayLib(updated.last_edited_time);
+    data = mapRecordTaskDev(updated.properties);
   }
   if (data.people && data.people !== row.data.people) {
-    const updated = (await notion.pages.update({ page_id: notionId, properties: { Assignee: { select: { name: data.people } } } })) as any;
-    updatedAt = dayLib(updated.last_edited_time); data = mapRecordTaskDev(updated.properties);
+    const updated = (await notion.pages.update({
+      page_id: notionId,
+      properties: { Assignee: { select: { name: data.people } } },
+    })) as any;
+    updatedAt = dayLib(updated.last_edited_time);
+    data = mapRecordTaskDev(updated.properties);
   }
-  if (data.is_editable && data.status === "completed" && data.team === "LUNDGAARD JENSEN ADVOCACIA") {
+  if (
+    data.is_editable &&
+    data.status === "completed" &&
+    data.team === "LUNDGAARD JENSEN ADVOCACIA"
+  ) {
     if (!data.completed_at) {
-      const updated = (await notion.pages.update({ page_id: notionId, properties: { "Concluído em": { date: { start: dayLib().format("YYYY-MM-DD") } } } })) as any;
-      updatedAt = dayLib(updated.last_edited_time); data = mapRecordTaskDev(updated.properties);
+      const updated = (await notion.pages.update({
+        page_id: notionId,
+        properties: {
+          "Concluído em": { date: { start: dayLib().format("YYYY-MM-DD") } },
+        },
+      })) as any;
+      updatedAt = dayLib(updated.last_edited_time);
+      data = mapRecordTaskDev(updated.properties);
     }
     const source = await getStorageDev("DATA_SOURCE_COMPLETED_TASK");
     if (source) {
       const completedAt = dayLib(data.completed_at);
-      await notion.pages.create({ parent: { data_source_id: source.data }, properties: {
-        Nome: { title: [{ text: { content: `${customer?.name} - ${data.name}` } }] },
-        Team: { select: { name: "WORK CONCLUSION - ADVOCACIA" } }, Pessoa: { people: [{ id: data.people_id }] },
-        "Concluído em": { date: { start: completedAt.format("YYYY-MM-DD") } }, DEVIS: { rich_text: [{ text: { content: data.devis } }] },
-        Project: { select: { name: `WORK COMPLETED - ${MONTHS_NAME[completedAt.format("MM")]} ${completedAt.format("YYYY")}` } }, Task: { relation: [{ id: notionId }] },
-      } });
+      await notion.pages.create({
+        parent: { data_source_id: source.data },
+        properties: {
+          Nome: {
+            title: [{ text: { content: `${customer?.name} - ${data.name}` } }],
+          },
+          Team: { select: { name: "WORK CONCLUSION - ADVOCACIA" } },
+          Pessoa: { people: [{ id: data.people_id }] },
+          "Concluído em": { date: { start: completedAt.format("YYYY-MM-DD") } },
+          DEVIS: { rich_text: [{ text: { content: data.devis } }] },
+          Project: {
+            select: {
+              name: `WORK COMPLETED - ${MONTHS_NAME[completedAt.format("MM")]} ${completedAt.format("YYYY")}`,
+            },
+          },
+          Task: { relation: [{ id: notionId }] },
+        },
+      });
     }
   }
-  if (data.is_editable && data.status !== "completed" && data.team === "LUNDGAARD JENSEN ADVOCACIA" && row.data.status === "completed") {
-    const completed = await database.findFirst<{ id: number; notion_id: string }>({ table: "completed_tasks", where: { task_id: row.id }, select: { id: true, notion_id: true } });
-    if (completed) { await notion.pages.update({ page_id: completed.notion_id, in_trash: true }); await database.deleteFromTable({ table: "completed_tasks", where: { id: completed.id } }); }
+  if (
+    data.is_editable &&
+    data.status !== "completed" &&
+    data.team === "LUNDGAARD JENSEN ADVOCACIA" &&
+    row.data.status === "completed"
+  ) {
+    const completed = await database.findFirst<{
+      id: number;
+      notion_id: string;
+    }>({
+      table: "completed_tasks",
+      where: { task_id: row.id },
+      select: { id: true, notion_id: true },
+    });
+    if (completed) {
+      await notion.pages.update({
+        page_id: completed.notion_id,
+        in_trash: true,
+      });
+      await database.deleteFromTable({
+        table: "completed_tasks",
+        where: { id: completed.id },
+      });
+    }
   }
-  await database.updateIntoTable({ table: "tasks", dataDict: { data, customer_id: customer?.id, updated_at: updatedAt.toDate() }, where: { id: row.id } });
+  await database.updateIntoTable({
+    table: "tasks",
+    dataDict: {
+      data,
+      customer_id: customer?.id,
+      updated_at: updatedAt.toDate(),
+    },
+    where: { id: row.id },
+  });
 }
 
 export async function excludeTaskDev(notionId: string) {
   const database = await databaseNotionDevPromise;
-  const row = await database.findFirst<{ id: number }>({ table: "tasks", where: { notion_id: notionId }, select: { id: true } });
-  if (row) await database.deleteFromTable({ table: "tasks", where: { id: row.id } });
+  const row = await database.findFirst<{ id: number }>({
+    table: "tasks",
+    where: { notion_id: notionId },
+    select: { id: true },
+  });
+  if (row)
+    await database.deleteFromTable({ table: "tasks", where: { id: row.id } });
 }

@@ -8,6 +8,7 @@ type FindWinner = () => Promise<{ id: number } | null>;
 type TaskDevData = {
   customer: string;
   customer_id?: number;
+  customer_notion_id?: string;
   assignee: string;
   people: string;
   is_editable: boolean;

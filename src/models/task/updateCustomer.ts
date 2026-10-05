@@ -18,6 +18,7 @@ export async function updateTaskCustomer(
   notion_id: string,
   project: string,
   customer_id: unknown,
+  customer_notion_id?: string,
 ) {
   const database = await databaseNotionPromise;
   const taskRef = createHash("sha256")
@@ -27,6 +28,7 @@ export async function updateTaskCustomer(
   const current = await resolveCurrentCustomerJob({
     project,
     customerId: customer_id,
+    customerNotionId: customer_notion_id,
     loadTask: () =>
       database.findFirst({
         table: "tasks",
@@ -37,9 +39,11 @@ export async function updateTaskCustomer(
       let customer = await retrieveCustomer(
         project,
         customer_id as number | undefined,
+        customer_notion_id,
       );
       if (
         customer &&
+        !customer_notion_id &&
         project &&
         project.trim().toUpperCase() !== customer.name
       ) {

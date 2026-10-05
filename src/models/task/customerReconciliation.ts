@@ -57,6 +57,7 @@ function hasCustomerId(value: unknown): boolean {
 function normalizedCustomerReference(data: unknown): {
   customer: string;
   customerId?: number;
+  customerNotionId?: string;
 } {
   const taskData = asTaskData(data);
   return {
@@ -67,6 +68,10 @@ function normalizedCustomerReference(data: unknown): {
     customerId: hasCustomerId(taskData.customer_id)
       ? Number(taskData.customer_id)
       : undefined,
+    customerNotionId:
+      typeof taskData.customer_notion_id === "string"
+        ? taskData.customer_notion_id
+        : undefined,
   };
 }
 
@@ -76,6 +81,10 @@ export function customerReferenceChanged(
 ): boolean {
   const previous = normalizedCustomerReference(previousData);
   const next = normalizedCustomerReference(nextData);
+  if (previous.customerNotionId && next.customerNotionId) {
+    return previous.customerNotionId !== next.customerNotionId;
+  }
+
   return (
     previous.customer !== next.customer ||
     previous.customerId !== next.customerId
@@ -86,10 +95,12 @@ export function customerReferenceMatches(
   data: unknown,
   project: unknown,
   customerId: unknown,
+  customerNotionId?: unknown,
 ): boolean {
   return !customerReferenceChanged(data, {
     customer: project,
     customer_id: customerId,
+    customer_notion_id: customerNotionId,
   });
 }
 
@@ -136,6 +147,10 @@ export function customerJobData(task: CustomerReconciliationTask) {
     customer_id: hasCustomerId(data.customer_id)
       ? Number(data.customer_id)
       : undefined,
+    ...(typeof data.customer_notion_id === "string" &&
+    data.customer_notion_id.length > 0
+      ? { customer_notion_id: data.customer_notion_id }
+      : {}),
   };
 }
 

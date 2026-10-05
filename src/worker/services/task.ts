@@ -1,10 +1,11 @@
 import { Worker } from "bullmq";
-import type { TaskAssigneeJob, TaskCustomerJob } from "../../queues";
+
 import { createTask } from "../../models/task/create";
-import { updateTask } from "../../models/task/update";
 import { excludeTask } from "../../models/task/exclude";
+import { updateTask } from "../../models/task/update";
 import { updateTaskAssignee } from "../../models/task/updateAssignee";
 import { updateTaskCustomer } from "../../models/task/updateCustomer";
+import type { TaskAssigneeJob, TaskCustomerJob } from "../../queues";
 import { runWithRetryPolicy } from "../retryPolicy";
 
 export const createTaskWorker = new Worker<string>(
@@ -56,6 +57,7 @@ export const updateTaskCustomerWorker = new Worker<TaskCustomerJob>(
         job.data.notion_id,
         job.data.project,
         job.data.customer_id,
+        job.data.customer_notion_id,
       ),
     );
   },

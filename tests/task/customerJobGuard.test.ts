@@ -3,7 +3,10 @@ import test from "node:test";
 
 import { reconcileTaskCustomers } from "../../src/cron/reconcileTaskCustomers";
 import { resolveCurrentCustomerJob } from "../../src/models/task/customerJobGuard";
-import { selectCustomerReconciliationBatch } from "../../src/models/task/customerReconciliation";
+import {
+  customerReferenceMatches,
+  selectCustomerReconciliationBatch,
+} from "../../src/models/task/customerReconciliation";
 
 const now = new Date("2026-09-16T00:30:00.000Z");
 
@@ -128,4 +131,97 @@ test("an already stale job skips customer resolution", async () => {
 
   assert.equal(current, undefined);
   assert.equal(resolutions, 0);
+});
+
+test("a relation change makes an older customer job stale", async () => {
+  let resolutions = 0;
+  const current = await resolveCurrentCustomerJob({
+    project: "A CLIENT",
+    customerId: 1,
+    customerNotionId: "customer-a",
+    loadTask: async () => ({
+      id: 7,
+      customer_id: null,
+      data: {
+        customer: "A CLIENT",
+        customer_id: 1,
+        customer_notion_id: "customer-b",
+      },
+    }),
+    resolveCustomer: async () => {
+      resolutions += 1;
+      return undefined;
+    },
+    onStale: () => undefined,
+  });
+  assert.equal(current, undefined);
+  assert.equal(resolutions, 0);
+});
+
+test("a relation change during resolution makes the customer job stale", async () => {
+  let data: unknown = { customer_notion_id: "customer-a" };
+  let resolutions = 0;
+  const current = await resolveCurrentCustomerJob({
+    project: "A CLIENT",
+    customerId: 1,
+    customerNotionId: "customer-a",
+    loadTask: async () => ({ id: 7, customer_id: null, data }),
+    resolveCustomer: async () => {
+      resolutions += 1;
+      data = { customer_notion_id: "customer-b" };
+      return { id: 1, name: "A CLIENT", notion_id: "customer-a" };
+    },
+    onStale: () => undefined,
+  });
+  assert.equal(current, undefined);
+  assert.equal(resolutions, 1);
+});
+
+test("matching relations are authoritative over legacy references", () => {
+  assert.equal(
+    customerReferenceMatches(
+      { customer_notion_id: "customer-a", customer_id: 1, customer: "A" },
+      "DIFFERENT",
+      99,
+      "customer-a",
+    ),
+    true,
+  );
+  assert.equal(
+    customerReferenceMatches(
+      { customer_notion_id: "customer-a", customer_id: 1, customer: "A" },
+      "A",
+      1,
+      "customer-b",
+    ),
+    false,
+  );
+});
+
+test("legacy references remain the fallback when relations are unavailable", () => {
+  assert.equal(
+    customerReferenceMatches({ customer: "A", customer_id: 1 }, "A", 1),
+    true,
+  );
+  assert.equal(
+    customerReferenceMatches({ customer: "A", customer_id: 1 }, "B", 1),
+    false,
+  );
+  assert.equal(
+    customerReferenceMatches(
+      { customer_notion_id: "customer-a", customer: "A", customer_id: 1 },
+      "A",
+      1,
+    ),
+    true,
+  );
+  assert.equal(
+    customerReferenceMatches(
+      { customer: "A", customer_id: 1 },
+      "A",
+      1,
+      "customer-a",
+    ),
+    true,
+  );
 });
