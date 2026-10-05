@@ -10,6 +10,13 @@ Depois dele, a estratégia padrão é forward reconciliation. Nunca execute roll
 
 ## 1. Evidência e classes de artefato
 
+### Preparação de release
+
+Antes de promover `current`, o processo de release deve concluir código, build, views e `ops`, e
+executar `ops/prepare-release-runtime.sh <release-root>`. Esse passo cria e valida o symlink
+`<release-root>/pg-utils.json -> /etc/lundgaard/pg-utils.json`; a configuração permanece fora do
+Git e nunca é copiada para o release. Só depois da validação do link o release pode ser promovido.
+
 Todo dump, volume, env, arquivo runtime, receipt e manifest recebe uma classe explícita:
 
 - `REHEARSAL-YYYYMMDD-rNN`: laboratório, nunca promovido por rename;

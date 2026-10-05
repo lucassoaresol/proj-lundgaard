@@ -6,6 +6,8 @@ import { reconcileTaskCustomers } from "../../src/cron/reconcileTaskCustomers";
 import {
   CUSTOMER_PROBE_BATCH_LIMIT,
   CUSTOMER_QUEUE_BATCH_LIMIT,
+  hasUsableCustomerReference,
+  requiresLiveCustomerProbe,
   selectCustomerReconciliationBatch,
 } from "../../src/models/task/customerReconciliation";
 
@@ -47,6 +49,82 @@ test("a task with a stored customer name is enqueued without a Notion probe", ()
     selection.direct.map(({ id }) => id),
     [1],
   );
+  assert.equal(selection.probes.length, 0);
+});
+
+test("marked legacy references always require a live probe", () => {
+  for (const status of [
+    "unresolved_reference",
+    "no_customer_reference",
+    "notion_inaccessible",
+    "transient_failure",
+  ]) {
+    const data = {
+      customer: "LEGACY NAME",
+      customer_id: 42,
+      _customer_reconciliation: {
+        status,
+        next_retry_at: "2026-09-01T00:00:00.000Z",
+      },
+    };
+    assert.equal(requiresLiveCustomerProbe(data), true);
+    const selection = selectCustomerReconciliationBatch([task(1, data)], now);
+    assert.equal(selection.direct.length, 0);
+    assert.equal(selection.probes.length, 1);
+  }
+});
+
+test("a marker with an authoritative customer relation can go direct", () => {
+  const data = {
+    customer_notion_id: "customer-page",
+    _customer_reconciliation: {
+      status: "unresolved_reference",
+      next_retry_at: "2026-09-01T00:00:00.000Z",
+    },
+  };
+  assert.equal(requiresLiveCustomerProbe(data), false);
+  assert.equal(hasUsableCustomerReference(data), true);
+  assert.deepEqual(
+    selectCustomerReconciliationBatch([task(1, data)], now).direct.map(
+      ({ id }) => id,
+    ),
+    [1],
+  );
+});
+
+test("a relation-only snapshot is a usable reference", () => {
+  assert.equal(
+    hasUsableCustomerReference({ customer_notion_id: "customer-page" }),
+    true,
+  );
+});
+
+test("legacy unmarked references preserve direct compatibility", () => {
+  const selection = selectCustomerReconciliationBatch(
+    [task(1, { customer: "LEGACY NAME", customer_id: 42 })],
+    now,
+  );
+  assert.deepEqual(
+    selection.direct.map(({ id }) => id),
+    [1],
+  );
+  assert.equal(selection.probes.length, 0);
+});
+
+test("marked legacy references in cooldown remain out of both paths", () => {
+  const selection = selectCustomerReconciliationBatch(
+    [
+      task(1, {
+        customer_id: 42,
+        _customer_reconciliation: {
+          status: "unresolved_reference",
+          next_retry_at: "2026-10-01T00:00:00.000Z",
+        },
+      }),
+    ],
+    now,
+  );
+  assert.equal(selection.direct.length, 0);
   assert.equal(selection.probes.length, 0);
 });
 

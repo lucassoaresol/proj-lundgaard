@@ -54,6 +54,10 @@ function hasCustomerId(value: unknown): boolean {
   return Number.isInteger(number) && number > 0;
 }
 
+function hasCustomerNotionId(value: unknown): boolean {
+  return typeof value === "string" && value.trim().length > 0;
+}
+
 function normalizedCustomerReference(data: unknown): {
   customer: string;
   customerId?: number;
@@ -128,7 +132,17 @@ export function shouldQueueCustomerReconciliation(
 export function hasUsableCustomerReference(data: unknown): boolean {
   const taskData = asTaskData(data);
   return (
-    hasCustomerName(taskData.customer) || hasCustomerId(taskData.customer_id)
+    hasCustomerNotionId(taskData.customer_notion_id) ||
+    hasCustomerName(taskData.customer) ||
+    hasCustomerId(taskData.customer_id)
+  );
+}
+
+export function requiresLiveCustomerProbe(data: unknown): boolean {
+  const taskData = asTaskData(data);
+  return (
+    Boolean(taskData[CUSTOMER_RECONCILIATION_KEY]) &&
+    !hasCustomerNotionId(taskData.customer_notion_id)
   );
 }
 
@@ -178,10 +192,18 @@ export function selectCustomerReconciliationBatch(
 
   return {
     direct: prioritized
-      .filter((task) => hasUsableCustomerReference(task.data))
+      .filter(
+        (task) =>
+          hasUsableCustomerReference(task.data) &&
+          !requiresLiveCustomerProbe(task.data),
+      )
       .slice(0, queueLimit),
     probes: prioritized
-      .filter((task) => !hasUsableCustomerReference(task.data))
+      .filter(
+        (task) =>
+          !hasUsableCustomerReference(task.data) ||
+          requiresLiveCustomerProbe(task.data),
+      )
       .slice(0, probeLimit),
   };
 }

@@ -7,6 +7,11 @@ config_file=/etc/lundgaard/runtime.env
 node_bin=/root/.nvm/versions/node/v25.8.2/bin/node
 runtime_root=/root/lundgaard/prod/current
 
+if [ ! -r "$runtime_root/pg-utils.json" ] || [ "$(readlink -f "$runtime_root/pg-utils.json" 2>/dev/null || true)" != "/etc/lundgaard/pg-utils.json" ]; then
+  echo "Lundgaard PostgreSQL runtime configuration link is unavailable" >&2
+  exit 1
+fi
+
 if [ ! -r "$config_file" ]; then
   echo "Lundgaard runtime config is not readable: $config_file" >&2
   exit 1
